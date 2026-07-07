@@ -1,0 +1,1934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="theme-color" content="#0a0a1a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Cache</title>
+<link rel="icon" type="image/svg+xml" id="dynamic-favicon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        obsidian: { 900: '#0a0a1a', 800: '#0f0f2a', 700: '#1a1a3e', 600: '#2a2a5e', 500: '#3a3a7e' },
+        neon: { blue: '#2563eb', indigo: '#1e40af', cyan: '#00d4ff', purple: '#7c3aed', green: '#10b981', amber: '#f59e0b' },
+      },
+      backdropBlur: { xl: '24px', '2xl': '40px' },
+      animation: {
+        'pulse-glow': 'pulseGlow 2s ease-in-out infinite',
+        'slide-up': 'slideUp 0.4s ease-out',
+        'slide-down': 'slideDown 0.3s ease-out',
+        'fade-in': 'fadeIn 0.5s ease-out',
+        'shake': 'shake 0.5s ease-in-out',
+        'float': 'float 6s ease-in-out infinite',
+      },
+      keyframes: {
+        pulseGlow: { '0%,100%': { boxShadow: '0 0 20px rgba(37,99,235,0.2)' }, '50%': { boxShadow: '0 0 40px rgba(37,99,235,0.4)' } },
+        slideUp: { '0%': { transform: 'translateY(30px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } },
+        slideDown: { '0%': { transform: 'translateY(-20px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } },
+        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+        shake: { '0%,100%': { transform: 'translateX(0)' }, '20%': { transform: 'translateX(-10px)' }, '40%': { transform: 'translateX(10px)' }, '60%': { transform: 'translateX(-5px)' }, '80%': { transform: 'translateX(5px)' } },
+        float: { '0%,100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-20px)' } },
+      },
+    },
+  },
+};
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+:root {
+  --accent-primary: #2563eb;
+  --accent-secondary: #1e40af;
+  --accent-cyan: #00d4ff;
+  --accent-purple: #7c3aed;
+  --accent-green: #10b981;
+  --accent-amber: #f59e0b;
+  --bg-obsidian-900: #0a0a1a;
+  --bg-obsidian-800: #0f0f2a;
+  --bg-obsidian-700: #1a1a3e;
+  --bg-obsidian-600: #2a2a5e;
+  --text-primary: #f0f0f0;
+  --text-secondary: #a0a0c0;
+  --text-muted: #606080;
+  --glass-bg: rgba(26, 26, 62, 0.6);
+  --glass-border: rgba(42, 42, 94, 0.4);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+*{scrollbar-width:thin;scrollbar-color:var(--bg-obsidian-600) transparent}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg-obsidian-600);border-radius:3px}
+body{font-family:'Inter',sans-serif;background:var(--bg-obsidian-900);color:var(--text-primary);overflow-x:hidden;min-height:100vh}
+.font-mono{font-family:'JetBrains Mono',monospace}
+.glass{background:var(--glass-bg);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid var(--glass-border);box-shadow:var(--glass-shadow)}
+.glass-strong{background:rgba(15,15,42,0.8);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);border:1px solid var(--glass-border);box-shadow:var(--glass-shadow)}
+.glow-accent{box-shadow:0 0 20px rgba(37,99,235,0.15)}
+.glow-accent:hover{box-shadow:0 0 40px rgba(37,99,235,0.3)}
+.neon-text{background:linear-gradient(135deg,#3b82f6,var(--accent-cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.card-hover{transition:all 0.3s cubic-bezier(0.4,0,0.2,1)}
+.card-hover:hover{transform:translateY(-6px);box-shadow:0 12px 40px rgba(37,99,235,0.2);border-color:var(--accent-primary)}
+#gateway-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,var(--bg-obsidian-800),var(--bg-obsidian-900));backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);transition:opacity 0.6s ease,transform 0.6s ease}
+#gateway-overlay.hidden{opacity:0;transform:scale(1.1);pointer-events:none}
+#gateway-overlay.removed{display:none}
+.gateway-container{max-width:520px;width:90%;padding:40px;text-align:center;animation:fadeIn 0.8s ease-out}
+.gateway-title{font-size:2.5rem;font-weight:800;margin-bottom:8px}
+.gateway-subtitle{color:var(--text-secondary);margin-bottom:32px;font-size:0.95rem}
+.gateway-input{width:100%;padding:14px 20px;background:rgba(255,255,255,0.05);border:2px solid var(--glass-border);border-radius:12px;color:var(--text-primary);font-size:1rem;outline:none;transition:all 0.3s;font-family:'Inter',sans-serif}
+.gateway-input:focus{border-color:var(--accent-primary);box-shadow:0 0 30px rgba(37,99,235,0.15);background:rgba(255,255,255,0.08)}
+.gateway-input.error{border-color:var(--accent-primary);animation:shake 0.5s ease-in-out}
+.gateway-input::placeholder{color:var(--text-muted);font-size:0.9rem}
+.gateway-btn{width:100%;padding:14px;margin-top:16px;background:linear-gradient(135deg,var(--accent-primary),#1d4ed8);border:none;border-radius:12px;color:#fff;font-size:1rem;font-weight:600;cursor:pointer;transition:all 0.3s;font-family:'Inter',sans-serif}
+.gateway-btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(37,99,235,0.3)}
+.gateway-btn:active{transform:translateY(0)}
+.gateway-error{color:var(--accent-primary);font-size:0.85rem;margin-top:8px;min-height:24px;transition:opacity 0.3s}
+.canvas-board{width:100%;min-height:80px;background:rgba(255,255,255,0.03);border-radius:12px;padding:16px;margin-bottom:24px;border:1px dashed var(--glass-border);color:var(--text-secondary);font-size:0.85rem;line-height:1.6;cursor:pointer;transition:all 0.3s;white-space:pre-wrap;text-align:left}
+.canvas-board:hover{border-color:var(--accent-primary);background:rgba(255,255,255,0.05)}
+.canvas-board:empty:before{content:attr(data-placeholder);color:var(--text-muted)}
+#app-wrapper{display:none;min-height:100vh;flex-direction:column}
+#app-wrapper.active{display:flex}
+
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;background:rgba(15,15,42,0.9);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-right:1px solid var(--glass-border);z-index:40;transform:translateX(-100%);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);overflow-y:auto;padding:16px}
+.sidebar.open{transform:translateX(0)}
+.sidebar-link{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;color:var(--text-secondary);text-decoration:none;transition:all 0.2s;cursor:pointer;font-size:0.9rem}
+.sidebar-link:hover{background:rgba(37,99,235,0.1);color:var(--text-primary)}
+.sidebar-link.active{background:rgba(37,99,235,0.15);color:var(--accent-primary)}
+.sidebar-link svg{width:20px;height:20px;flex-shrink:0}
+#category-bar{overflow-x:auto;overflow-y:hidden;white-space:nowrap;padding:8px 0;gap:6px}
+#category-bar::-webkit-scrollbar{height:2px}
+.cat-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 16px;border-radius:20px;font-size:0.8rem;font-weight:500;cursor:pointer;transition:all 0.25s;border:1px solid var(--glass-border);background:transparent;color:var(--text-secondary);white-space:nowrap;font-family:'Inter',sans-serif}
+.cat-chip:hover{background:rgba(37,99,235,0.1);border-color:var(--accent-primary);color:var(--text-primary)}
+.cat-chip.active{background:var(--accent-primary);border-color:var(--accent-primary);color:#fff}
+.cat-chip svg{width:14px;height:14px}
+.game-card{background:var(--glass-bg);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--glass-border);border-radius:16px;overflow:hidden;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);cursor:pointer;position:relative}
+.game-card:hover{transform:translateY(-6px);box-shadow:0 12px 40px rgba(37,99,235,0.2);border-color:var(--accent-primary)}
+.game-card-thumb{width:100%;aspect-ratio:16/9;background:linear-gradient(135deg,var(--bg-obsidian-700),var(--bg-obsidian-800));display:flex;align-items:center;justify-content:center;font-size:2.5rem;position:relative;overflow:hidden}
+.game-card-thumb .overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(10,10,26,0.8),transparent 50%);opacity:0;transition:opacity 0.3s}
+.game-card:hover .overlay{opacity:1}
+.game-card-body{padding:12px 14px 14px}
+.game-card-title{font-size:0.9rem;font-weight:600;color:var(--text-primary);margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.game-card-cat{font-size:0.7rem;color:var(--text-secondary);margin-bottom:8px}
+.game-card-footer{display:flex;justify-content:space-between;align-items:center}
+.game-card-fav{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:4px;border-radius:8px;transition:all 0.3s;display:flex;align-items:center;justify-content:center}
+.game-card-fav:hover{color:var(--accent-primary);background:rgba(37,99,235,0.1)}
+.game-card-fav.active{color:var(--accent-primary)}
+.game-card-fav svg{width:18px;height:18px}
+.game-card-play{background:var(--accent-primary);border:none;border-radius:8px;color:#fff;font-size:0.75rem;font-weight:600;padding:6px 14px;cursor:pointer;transition:all 0.3s;font-family:'Inter',sans-serif}
+.game-card-play:hover{background:#1d4ed8;transform:scale(1.05)}
+#theater-view{position:fixed;inset:0;z-index:1000;background:var(--bg-obsidian-900);display:none;flex-direction:column;animation:fadeIn 0.3s ease-out}
+#theater-view.open{display:flex}
+.theater-toolbar{display:flex;align-items:center;padding:8px 16px;gap:12px;background:rgba(10,10,26,0.95);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-bottom:1px solid var(--glass-border);min-height:48px;z-index:10}
+.theater-toolbar .title{flex:1;font-size:0.9rem;font-weight:600;text-align:center;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.theater-toolbar button{background:none;border:none;color:var(--text-secondary);cursor:pointer;padding:6px 10px;border-radius:8px;transition:all 0.2s;display:flex;align-items:center;gap:4px;font-size:0.8rem;font-family:'Inter',sans-serif}
+.theater-toolbar button:hover{color:var(--text-primary);background:rgba(255,255,255,0.05)}
+.theater-frame{flex:1;border:none;width:100%;background:#000}
+.theater-dock{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:8px;padding:10px 20px;border-radius:50px;background:rgba(10,10,26,0.9);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid var(--glass-border);z-index:10;align-items:center;cursor:grab;user-select:none;touch-action:none}
+.theater-dock.dragging{cursor:grabbing;opacity:0.85}
+.theater-dock button{background:none;border:none;color:var(--text-secondary);cursor:pointer;padding:8px;border-radius:50%;transition:all 0.2s;display:flex;align-items:center;justify-content:center}
+.theater-dock button:hover{color:var(--text-primary);background:rgba(255,255,255,0.1)}
+.theater-dock button svg{width:20px;height:20px}
+#admin-overlay{position:fixed;inset:0;z-index:9980;background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center;animation:fadeIn 0.3s ease-out}
+#admin-overlay.open{display:flex}
+#admin-overlay .modal{max-width:400px;width:90%;padding:32px;border-radius:20px;animation:slideUp 0.4s ease-out}
+.auth-input{width:100%;padding:12px 16px;background:rgba(255,255,255,0.05);border:2px solid var(--glass-border);border-radius:10px;color:var(--text-primary);font-size:0.95rem;outline:none;transition:all 0.3s;font-family:'JetBrains Mono',monospace;letter-spacing:0.5em;text-align:center}
+.auth-input:focus{border-color:var(--accent-purple);box-shadow:0 0 30px rgba(124,58,237,0.15)}
+.auth-input.error{border-color:var(--accent-primary);animation:shake 0.5s ease-in-out}
+.auth-error{color:var(--accent-primary);font-size:0.85rem;margin-top:8px;min-height:24px;text-align:center}
+#admin-panel{position:fixed;inset:0;z-index:9990;background:var(--bg-obsidian-900);display:none;flex-direction:column;animation:fadeIn 0.4s ease-out}
+#admin-panel.open{display:flex}
+.admin-header{display:flex;align-items:center;padding:12px 24px;gap:16px;background:rgba(10,10,26,0.95);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-bottom:1px solid var(--glass-border);min-height:56px}
+.admin-header h2{font-size:1.2rem;font-weight:700;flex:1}
+.admin-header button{background:none;border:none;color:var(--text-secondary);cursor:pointer;padding:8px 12px;border-radius:8px;transition:all 0.2s;font-size:0.85rem;font-family:'Inter',sans-serif}
+.admin-header button:hover{color:var(--text-primary);background:rgba(255,255,255,0.05)}
+.admin-tabs{display:flex;gap:4px;padding:8px 24px;background:var(--bg-obsidian-800);border-bottom:1px solid var(--glass-border)}
+.admin-tab{padding:8px 20px;border:none;border-radius:8px 8px 0 0;background:transparent;color:var(--text-secondary);cursor:pointer;font-size:0.85rem;font-weight:500;transition:all 0.2s;font-family:'Inter',sans-serif}
+.admin-tab:hover{color:var(--text-primary);background:rgba(255,255,255,0.03)}
+.admin-tab.active{color:var(--accent-primary);background:rgba(37,99,235,0.1);border-bottom:2px solid var(--accent-primary)}
+.admin-content{flex:1;overflow-y:auto;padding:24px}
+.admin-table{width:100%;border-collapse:collapse;font-size:0.85rem}
+.admin-table th{text-align:left;padding:10px 14px;color:var(--text-muted);font-weight:500;border-bottom:1px solid var(--glass-border);font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em}
+.admin-table td{padding:10px 14px;border-bottom:1px solid rgba(42,42,94,0.3);color:var(--text-secondary)}
+.admin-table tr:hover td{background:rgba(255,255,255,0.02)}
+.admin-table .kick-btn{background:none;border:1px solid var(--accent-primary);color:var(--accent-primary);padding:4px 12px;border-radius:6px;cursor:pointer;font-size:0.75rem;transition:all 0.2s;font-family:'Inter',sans-serif}
+.admin-table .kick-btn:hover{background:var(--accent-primary);color:#fff}
+.stat-card{background:var(--glass-bg);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--glass-border);border-radius:16px;padding:20px;transition:all 0.3s}
+.stat-card:hover{border-color:var(--accent-primary);transform:translateY(-2px)}
+.stat-value{font-size:2rem;font-weight:700;color:var(--text-primary);font-family:'JetBrains Mono',monospace}
+.stat-label{font-size:0.8rem;color:var(--text-secondary);margin-top:4px}
+.stat-change{font-size:0.75rem;margin-top:4px}
+.lockdown-banner{position:fixed;inset:0;z-index:9995;background:var(--bg-obsidian-900);display:none;align-items:center;justify-content:center;flex-direction:column;gap:24px}
+.lockdown-banner.active{display:flex}
+.lockdown-banner h1{font-size:3rem;font-weight:800;color:var(--accent-primary)}
+.lockdown-banner p{color:var(--text-secondary);font-size:1.1rem}
+.stealth-toggle{position:relative;width:44px;height:24px;background:var(--glass-border);border-radius:12px;cursor:pointer;transition:all 0.3s;border:none;padding:0}
+.stealth-toggle.active{background:var(--accent-green)}
+.stealth-toggle::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:transform 0.3s}
+.stealth-toggle.active::after{transform:translateX(20px)}
+#drop-zone{min-height:180px;border:2px dashed var(--glass-border);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;transition:all 0.3s;cursor:pointer;color:var(--text-secondary);font-size:0.9rem}
+#drop-zone:hover,#drop-zone.drag-over{border-color:var(--accent-primary);background:rgba(37,99,235,0.05);color:var(--text-primary)}
+#drop-zone svg{width:40px;height:40px;opacity:0.5}
+.color-picker-grid{display:flex;gap:8px;flex-wrap:wrap}
+.color-swatch{width:36px;height:36px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:all 0.2s}
+.color-swatch:hover{transform:scale(1.15)}
+.color-swatch.active{border-color:#fff;box-shadow:0 0 20px rgba(255,255,255,0.2)}
+#toast-container{position:fixed;top:80px;right:20px;z-index:10000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{padding:12px 20px;background:var(--glass-strong);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid var(--glass-border);border-radius:12px;color:var(--text-primary);font-size:0.85rem;animation:slideDown 0.3s ease-out;pointer-events:auto;display:flex;align-items:center;gap:8px;min-width:250px}
+.toast svg{width:18px;height:18px;flex-shrink:0}
+.toast.success{border-left:3px solid var(--accent-green)}
+.toast.error{border-left:3px solid var(--accent-primary)}
+.toast.info{border-left:3px solid var(--accent-cyan)}
+.exp-bar{height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;flex:1}
+.exp-fill{height:100%;background:linear-gradient(90deg,var(--accent-primary),var(--accent-cyan));border-radius:3px;transition:width 0.5s ease}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:var(--text-muted);gap:12px;text-align:center}
+.empty-state svg{width:48px;height:48px;opacity:0.3}
+.search-highlight{background:var(--accent-amber);color:var(--bg-obsidian-900);padding:0 2px;border-radius:2px}
+.tier-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:10px;font-size:0.7rem;font-weight:600}
+.tier-badge.novice{background:rgba(156,163,175,0.2);color:#9ca3af}
+.tier-badge.apprentice{background:rgba(59,130,246,0.2);color:#3b82f6}
+.tier-badge.veteran{background:rgba(16,185,129,0.2);color:#10b981}
+.tier-badge.elite{background:rgba(124,58,237,0.2);color:#7c3aed}
+.tier-badge.legend{background:rgba(37,99,235,0.2);color:#2563eb}
+#panic-overlay{position:fixed;inset:0;z-index:99999;background:#fff;display:none}
+#panic-overlay.active{display:block}
+@media(max-width:768px){
+  .sidebar{width:100%;z-index:50}
+  .gateway-title{font-size:1.8rem}
+  .stat-value{font-size:1.5rem}
+  .admin-tabs{overflow-x:auto;padding:8px 12px;gap:2px}
+  .admin-tab{font-size:0.75rem;padding:6px 12px;white-space:nowrap}
+}
+@media(max-width:640px){
+  #category-bar{gap:4px}
+  .cat-chip{padding:4px 12px;font-size:0.75rem}
+}
+</style>
+</head>
+<body>
+
+<div id="panic-overlay"></div>
+
+<div id="lockdown-banner" class="lockdown-banner">
+  <h1>🔒</h1>
+  <h1>System Maintenance</h1>
+  <p>The platform is currently undergoing scheduled maintenance. Please check back shortly.</p>
+</div>
+
+<div id="gateway-overlay">
+  <div class="gateway-container">
+    <div class="gateway-title neon-text">Cache</div>
+    <p class="gateway-subtitle">Your personal game library. No fuss, just play.</p>
+    <div class="canvas-board" id="announcement-board" data-placeholder="Welcome to Cache — your personal game library. Pick a game and play instantly." contenteditable="true">Welcome to Cache — your personal game library. Pick a game and play instantly.</div>
+    <input type="text" id="username-input" class="gateway-input" placeholder="Enter your gamer tag..." maxlength="24" autocomplete="off">
+    <div id="gateway-error" class="gateway-error"></div>
+    <button id="gateway-submit" class="gateway-btn"
+onclick="window._gatewayEnter()">Enter Cache</button>
+  </div>
+</div>
+
+<div id="app-wrapper">
+  <div class="sidebar" id="sidebar">
+    <div class="flex items-center justify-between px-3 mb-3">
+      <div class="text-xl font-extrabold neon-text">CA</div>
+      <button id="sidebar-close" class="p-1.5 rounded-lg hover:bg-white/5 transition-colors"><i data-lucide="x" class="w-4 h-4 text-[var(--text-secondary)]"></i></button>
+    </div>
+    <div class="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3 px-3">Platform</div>
+    <a class="sidebar-link active" data-section="catalog"><i data-lucide="grid-3x3"></i> Game Library</a>
+    <a class="sidebar-link" data-section="favorites"><i data-lucide="heart"></i> Favorites</a>
+    <a class="sidebar-link" data-section="sideloader"><i data-lucide="upload"></i> Sideload Games</a>
+    <div class="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3 mt-6 px-3">Utilities</div>
+    <a class="sidebar-link" data-section="stealth"><i data-lucide="shield"></i> Stealth Suite</a>
+    <a class="sidebar-link" data-section="exploits"><i data-lucide="unlock"></i> School Exploits</a>
+    <a class="sidebar-link" data-section="settings"><i data-lucide="settings"></i> Settings</a>
+    <a id="panic-btn-sidebar" class="sidebar-link" style="color:var(--accent-primary)"><i data-lucide="alert-triangle"></i> Panic Escape</a>
+    <div class="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3 mt-6 px-3">System</div>
+    <a id="admin-trigger-sidebar" class="sidebar-link" style="color:var(--accent-purple)"><i data-lucide="terminal"></i> Admin Console</a>
+    <div class="mt-auto pt-6 px-3">
+      <div class="text-[10px] text-[var(--text-muted)]">Cache v3.0</div>
+      <div class="text-[10px] text-[var(--text-muted)] mt-1">All games loaded: <span id="sidebar-game-count">0</span></div>
+    </div>
+  </div>
+
+  <main class="pt-4 transition-all duration-300 min-h-screen" id="main-content">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="flex items-center gap-3 mb-2">
+        <button id="sidebar-toggle" class="p-2 rounded-lg hover:bg-white/5 transition-colors" aria-label="Toggle sidebar">
+          <i data-lucide="menu" class="w-5 h-5 text-[var(--text-secondary)]"></i>
+        </button>
+        <div class="flex-1 max-w-md relative">
+          <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] pointer-events-none"></i>
+          <input type="text" id="global-search" class="w-full bg-white/5 border border-[var(--glass-border)] rounded-lg pl-10 pr-8 py-2 text-sm text-[var(--text-primary)] outline-none transition-all focus:border-[var(--accent-primary)] focus:shadow-[0_0_20px_rgba(37,99,235,0.1)] placeholder:text-[var(--text-muted)]" placeholder="Search games...">
+          <button id="search-clear" class="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors hidden">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+        <div class="flex items-center gap-2">
+          <div id="profile-name" class="text-[var(--text-primary)] text-sm font-medium">Guest</div>
+          <div id="tier-badge" class="tier-badge novice !text-[10px]">Novice</div>
+        </div>
+      </div>
+      <div id="category-bar" class="flex gap-2 items-center py-3 overflow-x-auto"></div>
+      <div id="active-section" class="mb-4">
+        <div class="flex items-center justify-between">
+          <div><span class="text-xl font-bold">Game Library</span><span class="text-[var(--text-muted)] text-sm ml-2" id="game-count-display"></span></div>
+          <div class="flex items-center gap-2">
+            <select id="sort-select" class="bg-white/5 border border-[var(--glass-border)] rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)] outline-none focus:border-[var(--accent-primary)] font-['Inter']">
+              <option value="default">Default</option>
+              <option value="name">Name A-Z</option>
+              <option value="name-desc">Name Z-A</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div id="catalog-container">
+        <div id="catalog-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="theater-view">
+  <div class="theater-toolbar">
+    <button id="theater-back"><i data-lucide="arrow-left" class="w-4 h-4"></i> Back</button>
+    <span class="title" id="theater-title">Loading...</span>
+    <button id="theater-fullscreen"><i data-lucide="maximize-2" class="w-4 h-4"></i> Fullscreen</button>
+    <button id="theater-download"><i data-lucide="download" class="w-4 h-4"></i> Export</button>
+  </div>
+  <iframe id="theater-frame" class="theater-frame" allowfullscreen allow="autoplay; fullscreen; accelerometer; gyroscope; gamepad"></iframe>
+  <div class="theater-dock">
+    <button id="dock-back" title="Back"><i data-lucide="arrow-left"></i></button>
+    <button id="dock-reload" title="Reload"><i data-lucide="refresh-cw"></i></button>
+    <button id="dock-fullscreen" title="Fullscreen"><i data-lucide="maximize-2"></i></button>
+    <button id="dock-download" title="Export"><i data-lucide="download"></i></button>
+    <button id="dock-open" title="Open in new tab"><i data-lucide="external-link"></i></button>
+  </div>
+</div>
+
+<div id="admin-overlay">
+  <div class="modal glass-strong">
+    <div class="text-center mb-6">
+      <div class="text-3xl mb-2">🔐</div>
+      <h2 class="text-xl font-bold">Admin Authentication</h2>
+      <p class="text-sm text-[var(--text-secondary)] mt-1">Enter the master passkey to access the control centre</p>
+    </div>
+    <input type="password" id="auth-passkey" class="auth-input" placeholder="••••••" maxlength="32" autocomplete="off">
+    <div id="auth-error" class="auth-error"></div>
+    <button id="auth-submit" class="w-full mt-4 px-6 py-3 rounded-xl font-semibold text-sm border-none cursor-pointer transition-all duration-300" style="background:linear-gradient(135deg,var(--accent-purple),#5b21b6);color:#fff">Authenticate</button>
+    <button id="auth-cancel" class="w-full mt-2 px-6 py-2 rounded-xl font-medium text-sm border border-[var(--glass-border)] bg-transparent text-[var(--text-secondary)] cursor-pointer transition-all duration-300 hover:text-[var(--text-primary)] font-['Inter']">Cancel</button>
+  </div>
+</div>
+
+<div id="admin-panel">
+  <div class="admin-header">
+    <i data-lucide="terminal" class="w-5 h-5 text-[var(--accent-purple)]"></i>
+    <h2>Admin Control Centre</h2>
+    <span class="text-xs text-[var(--text-muted)] font-mono">v3.0.0</span>
+    <button id="admin-refresh"><i data-lucide="refresh-cw" class="w-4 h-4 inline mr-1"></i> Refresh</button>
+    <button id="admin-close"><i data-lucide="x" class="w-4 h-4 inline mr-1"></i> Close</button>
+  </div>
+  <div class="admin-tabs">
+    <button class="admin-tab active" data-atab="profiles"><i data-lucide="users" class="w-4 h-4 inline mr-1.5"></i>Profiles</button>
+    <button class="admin-tab" data-atab="canvas"><i data-lucide="edit-3" class="w-4 h-4 inline mr-1.5"></i>Canvas</button>
+    <button class="admin-tab" data-atab="resources"><i data-lucide="server" class="w-4 h-4 inline mr-1.5"></i>Resources</button>
+    <button class="admin-tab" data-atab="analytics"><i data-lucide="bar-chart-3" class="w-4 h-4 inline mr-1.5"></i>Analytics</button>
+    <button class="admin-tab" data-atab="appearance"><i data-lucide="palette" class="w-4 h-4 inline mr-1.5"></i>Appearance</button>
+    <button class="admin-tab" data-atab="uploader"><i data-lucide="upload" class="w-4 h-4 inline mr-1.5"></i>Uploader</button>
+  </div>
+  <div class="admin-content" id="admin-content">
+    <div class="admin-tab-content active" data-atab-content="profiles">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold">Active Sessions</h3>
+        <span class="text-xs text-[var(--text-muted)]" id="session-count">0 active sessions</span>
+      </div>
+      <table class="admin-table" id="sessions-table">
+        <thead><tr><th>Handle</th><th>Login Time</th><th>Status</th><th>Games Played</th><th>Actions</th></tr></thead>
+        <tbody id="sessions-body"></tbody>
+      </table>
+    </div>
+    <div class="admin-tab-content" data-atab-content="canvas">
+      <h3 class="text-lg font-semibold mb-4">Broadcast Canvas Editor</h3>
+      <div class="mb-4">
+        <label class="block text-sm text-[var(--text-secondary)] mb-2">Announcement Message</label>
+        <textarea id="admin-canvas-editor" class="w-full bg-white/5 border border-[var(--glass-border)] rounded-xl p-4 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent-cyan)] min-h-[120px] font-['Inter'] resize-y" placeholder="Type your announcement here..."></textarea>
+      </div>
+      <button id="canvas-update-btn" class="px-6 py-2.5 rounded-xl font-semibold text-sm border-none cursor-pointer transition-all" style="background:linear-gradient(135deg,var(--accent-cyan),#0e7490);color:#fff">Update Broadcast</button>
+    </div>
+    <div class="admin-tab-content" data-atab-content="resources">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div class="stat-card"><div class="stat-value" id="stat-cpu">0%</div><div class="stat-label">Virtual CPU Load</div><div class="stat-change text-[var(--accent-amber)]" id="stat-cpu-change">▲ 0%</div></div>
+        <div class="stat-card"><div class="stat-value" id="stat-memory">0 MB</div><div class="stat-label">Memory Cache</div><div class="stat-change text-[var(--accent-green)]" id="stat-memory-change">▼ 0 MB</div></div>
+        <div class="stat-card"><div class="stat-value" id="stat-bandwidth">0 MB</div><div class="stat-label">Bandwidth Saved</div><div class="stat-change text-[var(--accent-cyan)]" id="stat-bandwidth-change">+ 0 MB</div></div>
+      </div>
+      <div class="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-[var(--glass-border)]">
+        <div><div class="font-medium">System Lockdown</div><div class="text-xs text-[var(--text-secondary)]">Prevents all user access and shows maintenance screen</div></div>
+        <button id="lockdown-toggle" class="stealth-toggle"></button>
+      </div>
+    </div>
+    <div class="admin-tab-content" data-atab-content="analytics">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <div class="stat-card"><div class="stat-value" id="stat-total-sessions">0</div><div class="stat-label">Total Sessions</div></div>
+        <div class="stat-card"><div class="stat-value" id="stat-total-games">0</div><div class="stat-label">Games Launched</div></div>
+        <div class="stat-card"><div class="stat-value" id="stat-favorites-total">0</div><div class="stat-label">Favorites Collected</div></div>
+        <div class="stat-card"><div class="stat-value" id="stat-uptime">0h</div><div class="stat-label">Uptime</div></div>
+      </div>
+    </div>
+    <div class="admin-tab-content" data-atab-content="appearance">
+      <h3 class="text-lg font-semibold mb-4">Theme Customization</h3>
+      <div class="mb-6">
+        <label class="block text-sm text-[var(--text-secondary)] mb-3">Accent Color</label>
+        <div class="color-picker-grid">
+          <button class="color-swatch active" data-color="#2563eb" style="background:#2563eb" title="Blue"></button>
+          <button class="color-swatch" data-color="#00d4ff" style="background:#00d4ff" title="Cyan"></button>
+          <button class="color-swatch" data-color="#7c3aed" style="background:#7c3aed" title="Purple"></button>
+          <button class="color-swatch" data-color="#10b981" style="background:#10b981" title="Green"></button>
+          <button class="color-swatch" data-color="#f59e0b" style="background:#f59e0b" title="Amber"></button>
+          <button class="color-swatch" data-color="#3b82f6" style="background:#3b82f6" title="Blue"></button>
+          <button class="color-swatch" data-color="#ec4899" style="background:#ec4899" title="Pink"></button>
+          <button class="color-swatch" data-color="#8b5cf6" style="background:#8b5cf6" title="Violet"></button>
+        </div>
+      </div>
+      <button id="reset-colors-btn" class="px-6 py-2.5 rounded-xl font-medium text-sm border border-[var(--glass-border)] bg-transparent text-[var(--text-secondary)] cursor-pointer transition-all hover:text-[var(--text-primary)] font-['Inter']">Reset to Defaults</button>
+    </div>
+    <div class="admin-tab-content" data-atab-content="uploader">
+      <h3 class="text-lg font-semibold mb-4">Upload Game</h3>
+      <p class="text-sm text-[var(--text-secondary)] mb-4">Upload an HTML game file to add it to the library. The file will be saved to the server and appear in the catalog.</p>
+      <div class="bg-white/5 border-2 border-dashed border-[var(--glass-border)] rounded-xl p-8 text-center transition-all hover:border-[var(--accent-primary)]" id="upload-dropzone">
+        <i data-lucide="upload" class="w-12 h-12 mx-auto mb-3 text-[var(--text-muted)]"></i>
+        <div class="text-sm text-[var(--text-secondary)] mb-4">Drop an HTML file here or click to browse</div>
+        <input type="file" id="game-file-input" accept=".html" class="hidden">
+        <button id="upload-browse-btn" class="px-6 py-2.5 rounded-xl font-semibold text-sm border-none cursor-pointer transition-all" style="background:linear-gradient(135deg,var(--accent-primary),#1d4ed8);color:#fff">Browse Files</button>
+      </div>
+      <div id="upload-status" class="mt-4 hidden"></div>
+      <div class="mt-6">
+        <label class="block text-sm text-[var(--text-secondary)] mb-2">Game Title (optional)</label>
+        <input type="text" id="upload-title-input" class="w-full bg-white/5 border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]" placeholder="Auto-detected from filename if empty">
+      </div>
+      <div class="mt-4">
+        <label class="block text-sm text-[var(--text-secondary)] mb-2">Category</label>
+        <select id="upload-category-select" class="w-full bg-white/5 border border-[var(--glass-border)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]">
+          <option value="Sideloaded">Sideloaded</option>
+          <option value="Action">Action</option>
+          <option value="Puzzle">Puzzle</option>
+          <option value="Arcade">Arcade</option>
+          <option value="Strategy">Strategy</option>
+          <option value="Sports">Sports</option>
+          <option value="Racing">Racing</option>
+          <option value="Adventure">Adventure</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <button id="upload-submit-btn" class="mt-6 px-8 py-3 rounded-xl font-semibold text-sm border-none cursor-pointer transition-all disabled:opacity-40 disabled:cursor-not-allowed" style="background:linear-gradient(135deg,var(--accent-primary),#1d4ed8);color:#fff" disabled>Upload Game</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+/* Standalone gateway handler — always accessible regardless of IIFE */
+window._gatewayEnter = function() {
+  var i = document.getElementById('username-input');
+  var e = document.getElementById('gateway-error');
+  var o = document.getElementById('gateway-overlay');
+  if (!i || !o) return;
+  var v = i.value.trim();
+  if (!v || v.length < 2) {
+    e.textContent = v ? 'Must be 2+ characters' : 'Enter a gamer tag';
+    i.className = 'gateway-input error';
+    return;
+  }
+  e.textContent = '';
+try { if (window.AppState) { window.AppState.user = v; window.AppState.analytics.totalSessions++; window.AppState.saveUser(); window.AppState.saveAnalytics(); } } catch(ex) {}
+  o.classList.add('hidden');
+  setTimeout(function(){
+    o.classList.add('removed');
+    var w = document.getElementById('app-wrapper');
+    if (w) w.classList.add('active');
+    try { if (window.initApp) window.initApp(); } catch(ex) {}
+  }, 600);
+};
+</script>
+<script>
+(function(){
+'use strict';
+
+/* ===== CDN Fallback (school networks often block CDNs) ===== */
+if (typeof lucide === 'undefined') { window.lucide = { createIcons: function(){} }; }
+if (typeof tailwind === 'undefined') { window.tailwind = { config: {} }; }
+
+/* ===== PHASE 5: Custom LocalStorage State Engine ===== */
+const Store = {
+  _prefix: 'ngv_',
+  get(k, def) {
+    try {
+      const d = localStorage.getItem(this._prefix + k);
+      return d !== null ? JSON.parse(d) : def;
+    } catch { return def; }
+  },
+  set(k, v) {
+    try { localStorage.setItem(this._prefix + k, JSON.stringify(v)); } catch {}
+  },
+  remove(k) {
+    try { localStorage.removeItem(this._prefix + k); } catch {}
+  },
+  clear() {
+    try {
+      Object.keys(localStorage).filter(k => k.startsWith(this._prefix)).forEach(k => localStorage.removeItem(k));
+    } catch {}
+  }
+};
+
+/* ===== Global App State ===== */
+var AppState;
+window.AppState = AppState = {
+  user: Store.get('user', null),
+  favorites: Store.get('favorites', []),
+  settings: Store.get('settings', { accent: '#2563eb', stealth: false, lockdown: false, titleMasked: false, cardSize: 'medium', animations: true, layout: 'grid', autoPlay: false, showCat: true, fontSize: 'medium', confirmExit: false, launchInNewTab: false, showDescriptions: false, defaultSort: 'default', compactMode: false, reduceMotion: false, highContrast: false }),
+  sessions: Store.get('sessions', []),
+  canvas: Store.get('canvas', 'Welcome to Cache — your personal game library. Pick a game and play instantly.'),
+  analytics: Store.get('analytics', { launched: 0, totalSessions: 0, startTime: Date.now() }),
+  adminAuthed: Store.get('adminAuthed', false),
+  accentOverride: null,
+  _save() { Store.set('user', this.user); Store.set('favorites', this.favorites); Store.set('settings', this.settings); Store.set('sessions', this.sessions); Store.set('canvas', this.canvas); Store.set('analytics', this.analytics); Store.set('adminAuthed', this.adminAuthed); },
+  saveUser() { Store.set('user', this.user); this._syncSessions(); },
+  saveFavorites() { Store.set('favorites', this.favorites); this._syncWidgets(); },
+  saveSettings() { Store.set('settings', this.settings); this._applySettings(); },
+  saveCanvas() { Store.set('canvas', this.canvas); },
+  saveAdminAuthed() { Store.set('adminAuthed', this.adminAuthed); },
+  saveAnalytics() { Store.set('analytics', this.analytics); },
+  _syncSessions() {
+    if (this.user) {
+      const existing = this.sessions.findIndex(s => s.handle === this.user);
+      if (existing >= 0) { this.sessions[existing].lastSeen = Date.now(); this.sessions[existing].gamesPlayed = this.analytics.launched; }
+      else { this.sessions.unshift({ handle: this.user, loginTime: Date.now(), lastSeen: Date.now(), gamesPlayed: this.analytics.launched, status: 'active' }); }
+      this.sessions = this.sessions.slice(0, 50);
+      Store.set('sessions', this.sessions);
+    }
+  },
+  _syncWidgets() {
+    const nameEl = document.getElementById('profile-name');
+    const tierEl = document.getElementById('profile-tier');
+    const badgeEl = document.getElementById('tier-badge');
+    const expFill = document.getElementById('exp-fill');
+    if (!nameEl) return;
+    const tier = this._calcTier();
+    nameEl.textContent = this.user || 'Guest';
+    tierEl.textContent = tier.label;
+    badgeEl.textContent = tier.label;
+    badgeEl.className = 'tier-badge ' + tier.cls;
+    if (expFill) expFill.style.width = tier.pct + '%';
+  },
+  _calcTier() {
+    const count = this.favorites.length;
+    if (count >= 20) return { label: 'Legend', cls: 'legend', pct: 100 };
+    if (count >= 12) return { label: 'Elite', cls: 'elite', pct: 80 };
+    if (count >= 6) return { label: 'Veteran', cls: 'veteran', pct: 55 };
+    if (count >= 3) return { label: 'Apprentice', cls: 'apprentice', pct: 30 };
+    return { label: 'Novice', cls: 'novice', pct: count > 0 ? 15 : 0 };
+  },
+  _applySettings() {
+    const s = this.settings;
+    if (s.accent && !this.accentOverride) {
+      document.documentElement.style.setProperty('--accent-primary', s.accent);
+    }
+    if (s.titleMasked) {
+      document.title = s.maskedTitle || 'Google Docs - Home';
+    } else {
+      document.title = 'Cache';
+    }
+    const lb = document.getElementById('lockdown-banner');
+    if (lb) lb.classList.toggle('active', !!s.lockdown);
+    document.documentElement.style.setProperty('--card-radius', s.compactMode ? '8px' : '16px');
+    document.documentElement.style.setProperty('--card-gap', s.compactMode ? '8px' : '16px');
+    document.documentElement.style.setProperty('--font-scale', s.fontSize === 'small' ? '0.85' : s.fontSize === 'large' ? '1.15' : '1');
+    if (s.reduceMotion) {
+      document.documentElement.style.setProperty('--anim-speed', '0s');
+    } else {
+      document.documentElement.style.setProperty('--anim-speed', '0.3s');
+    }
+    if (s.highContrast) {
+      document.documentElement.style.setProperty('--text-primary', '#ffffff');
+      document.documentElement.style.setProperty('--text-secondary', '#cccccc');
+      document.documentElement.style.setProperty('--bg-obsidian-900', '#000000');
+    } else {
+      document.documentElement.style.setProperty('--text-primary', '#f0f0f0');
+      document.documentElement.style.setProperty('--text-secondary', '#a0a0c0');
+      document.documentElement.style.setProperty('--bg-obsidian-900', '#0a0a1a');
+    }
+  }
+};
+
+/* ===== PHASE 16: Game Database ===== */
+let GAMES = [
+  { id: 'g1', title: '2048', cat: 'Puzzle', desc: 'Merge tiles to reach 2048', url: 'https://play2048.co/', thumb: '2', embed: true },
+  { id: 'g2', title: 'Hextris', cat: 'Puzzle', desc: 'Hexagonal block stacking', url: 'https://hextris.io/', thumb: 'H', embed: true },
+  { id: 'g3', title: 'Doodle Jump', cat: 'Arcade', desc: 'Guide Doodle up endless platforms', url: 'https://doodlejump.io/', thumb: 'D', embed: true },
+  { id: 'g4', title: 'Cut the Rope', cat: 'Puzzle', desc: 'Feed Om Nom with candy', url: 'https://www.cuttherope.net/', thumb: 'C', embed: true },
+  { id: 'g5', title: 'Slope', cat: 'Racing', desc: 'Race down a 3D slope', url: 'https://slope-game.io/', thumb: 'S', embed: true },
+  { id: 'g6', title: 'Cookie Clicker', cat: 'Strategy', desc: 'Bake cookies to rule the world', url: 'https://orteil.dashnet.org/cookieclicker/', thumb: '🍪', embed: true },
+  { id: 'g7', title: 'T-Rex Runner', cat: 'Arcade', desc: 'Chrome dinosaur endless runner', url: 'https://chromedino.com/', thumb: '🦖', embed: true },
+  { id: 'g8', title: 'Tetris', cat: 'Puzzle', desc: 'Classic block stacking game', url: 'https://tetris.com/play-tetris', thumb: 'T', embed: true },
+  { id: 'g9', title: 'Subway Surfers', cat: 'Arcade', desc: 'Endless runner through subway', url: 'https://subway-surfers.io/', thumb: 'S', embed: true },
+  { id: 'g10', title: 'Fireboy & Watergirl', cat: 'Adventure', desc: 'Cooperative platform puzzle', url: 'https://fireboyandwatergirl.io/', thumb: '🔥', embed: true },
+  { id: 'g11', title: 'Minecraft Classic', cat: 'Adventure', desc: 'Classic browser Minecraft', url: 'https://classic.minecraft.net/', thumb: '⛏', embed: true },
+  { id: 'g12', title: 'Agar.io', cat: 'Action', desc: 'Grow by consuming others', url: 'https://agar.io/', thumb: '🟢', embed: true },
+  { id: 'g13', title: 'Shell Shockers', cat: 'Action', desc: 'Egg-based FPS shooter', url: 'https://shellshock.io/', thumb: '🥚', embed: true },
+  { id: 'g14', title: 'Paper.io', cat: 'Action', desc: 'Claim territory as paper', url: 'https://paper-io.com/', thumb: '📄', embed: true },
+  { id: 'g15', title: 'Wordle', cat: 'Puzzle', desc: 'Guess the 5-letter word', url: 'https://www.nytimes.com/games/wordle/', thumb: 'W', embed: false },
+  { id: 'g16', title: 'Geometry Dash', cat: 'Arcade', desc: 'Rhythm-based platformer', url: 'https://geometry-dash.io/', thumb: '▶', embed: true },
+  { id: 'g17', title: 'Basketball Stars', cat: 'Sports', desc: '1v1 basketball showdown', url: 'https://basketball-stars.io/', thumb: '🏀', embed: true },
+  { id: 'g18', title: 'Moto X3M', cat: 'Racing', desc: 'Stunt bike racing', url: 'https://motox3m.io/', thumb: '🏍', embed: true },
+  { id: 'g19', title: 'Slither.io', cat: 'Action', desc: 'Grow your snake', url: 'https://slither.io/', thumb: '🐍', embed: true },
+  { id: 'g20', title: 'Krunker.io', cat: 'Action', desc: 'Fast-paced FPS', url: 'https://krunker.io/', thumb: '🔫', embed: true },
+  { id: 'g21', title: 'Temple Run 2', cat: 'Arcade', desc: 'Endless running adventure', url: 'https://temple-run-2.io/', thumb: '🏃', embed: true },
+  { id: 'g22', title: 'Flappy Bird', cat: 'Arcade', desc: 'Tap to fly through pipes', url: 'https://flappybird.io/', thumb: '🐦', embed: true },
+  { id: 'g23', title: 'Chess', cat: 'Strategy', desc: 'Classic chess game', url: 'https://www.chess.com/play', thumb: '♟', embed: false },
+  { id: 'g24', title: 'Sudoku', cat: 'Puzzle', desc: 'Number placement puzzle', url: 'https://sudoku.com/', thumb: '9', embed: true },
+];
+let allCategories = ['Action','Puzzle','Arcade','Strategy','Sports','Racing','Adventure'];
+
+async function loadJSON(url) {
+  try {
+    var ctrl = new AbortController();
+    var t = setTimeout(function(){ ctrl.abort(); }, 5000);
+    const c = await fetch(url + '?v=' + Date.now(), { signal: ctrl.signal });
+    clearTimeout(t);
+    if (!c.ok) return null;
+    return await c.json();
+  } catch(e) { return null; }
+}
+
+async function loadLocalGames() {
+  let games = [];
+  const data = await loadJSON('games-data.json');
+  if (Array.isArray(data)) {
+    games = data.map((g, i) => ({
+      id: 'local_' + i,
+      title: g.t || g.f.replace(/^cl/i,'').replace(/\.html$/,'').replace(/ ?\(\d+\)/g,'').trim(),
+      cat: g.c || 'Other',
+      desc: 'Local game',
+      url: g.f.replace(/ /g, '%20'),
+      thumb: (g.t || 'G')[0].toUpperCase(),
+      embed: true,
+      local: true
+    }));
+  }
+  const data2 = await loadJSON('pizza-games.json');
+  if (Array.isArray(data2)) {
+    data2.forEach((g, i) => {
+      games.push({
+        id: 'pizza_' + i,
+        title: g.n,
+        cat: 'Web',
+        desc: 'Online game',
+        url: g.u,
+        thumb: g.n[0].toUpperCase(),
+        embed: true,
+        local: false,
+        external: true
+      });
+    });
+  }
+  return games;
+}
+
+async function loadAllGames() {
+  const base = GAMES;
+  const local = await loadLocalGames();
+  if (local.length) {
+    const merged = [...local];
+    const existingTitles = new Set(local.map(g => g.title.toLowerCase()));
+    base.forEach(g => { if (!existingTitles.has(g.title.toLowerCase())) merged.push(g); });
+    const catSet = new Set();
+    merged.forEach(g => catSet.add(g.cat));
+    allCategories = ['All', ...[...catSet].sort()];
+    return merged;
+  }
+  return base;
+}
+
+/* ===== Utility Functions ===== */
+function toast(msg, type) {
+  const c = document.getElementById('toast-container');
+  if (!c) return;
+  const iconMap = { success: 'check-circle', error: 'alert-circle', info: 'info' };
+  const el = document.createElement('div');
+  el.className = 'toast ' + (type || 'info');
+  el.innerHTML = '<i data-lucide="' + (iconMap[type] || 'info') + '" class="w-4 h-4"></i> ' + msg;
+  c.append(el);
+  lucide.createIcons({ scope: el });
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s'; setTimeout(() => el.remove(), 300); }, 3000);
+}
+
+function $(sel, ctx) { return (ctx || document).querySelector(sel); }
+function $$(sel, ctx) { return Array.from((ctx || document).querySelectorAll(sel)); }
+
+/* ===== PHASE 6-10: Gateway ===== */
+function initGateway() {
+  const overlay = document.getElementById('gateway-overlay');
+  const input = document.getElementById('username-input');
+  const errEl = document.getElementById('gateway-error');
+  const board = document.getElementById('announcement-board');
+
+  if (AppState.user && AppState.user !== 'Guest') {
+    overlay.classList.add('removed');
+    document.getElementById('app-wrapper').classList.add('active');
+    AppState._syncSessions();
+    AppState._syncWidgets();
+    window.initApp();
+    return;
+  }
+
+  if (AppState.canvas) board.textContent = AppState.canvas;
+
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('gateway-submit').click(); } });
+  input.addEventListener('input', () => { input.classList.remove('error'); errEl.textContent = ''; });
+
+  new MutationObserver(() => {
+    const txt = board.textContent.trim();
+    if (txt && txt !== AppState.canvas) {
+      AppState.canvas = txt;
+      AppState.saveCanvas();
+    }
+  }).observe(board, { characterData: true, childList: true, subtree: true });
+}
+
+
+
+/* ===== PHASES 11-12: Nav + Profile ===== */
+function initNav() {
+  const sidebar = document.getElementById('sidebar');
+  const sidebarToggle = document.getElementById('sidebar-toggle');
+  const sidebarClose = document.getElementById('sidebar-close');
+  if (sidebarToggle) sidebarToggle.addEventListener('click', () => sidebar.classList.toggle('open'));
+  if (sidebarClose) sidebarClose.addEventListener('click', () => sidebar.classList.remove('open'));
+  document.addEventListener('click', e => {
+    if (window.innerWidth > 768) return;
+    if (!sidebar.contains(e.target) && e.target !== sidebarToggle && !sidebarToggle?.contains(e.target)) {
+      sidebar.classList.remove('open');
+    }
+  });
+  $$('.sidebar-link[data-section]').forEach(link => {
+    link.addEventListener('click', () => {
+      const section = link.dataset.section;
+      showSection(section);
+      sidebar.classList.remove('open');
+    });
+  });
+}
+
+function showSection(section) {
+  $$('.sidebar-link').forEach(l => l.classList.toggle('active', l.dataset.section === section));
+  const container = document.getElementById('catalog-container');
+  const activeSection = document.getElementById('active-section');
+  const grid = document.getElementById('catalog-grid');
+
+  if (section === 'favorites') {
+    activeSection.querySelector('span:first-child').textContent = 'Favorites';
+    document.getElementById('game-count-display').textContent = '';
+    renderFavorites();
+  } else if (section === 'sideloader') {
+    activeSection.querySelector('span:first-child').textContent = 'Sideload Games';
+    document.getElementById('game-count-display').textContent = '';
+    renderSideloader();
+  } else if (section === 'stealth') {
+    activeSection.querySelector('span:first-child').textContent = 'Stealth Suite';
+    document.getElementById('game-count-display').textContent = '';
+    renderStealth();
+  } else if (section === 'exploits') {
+    activeSection.querySelector('span:first-child').textContent = 'School Exploits';
+    document.getElementById('game-count-display').textContent = '';
+    renderExploits();
+  } else if (section === 'settings') {
+    activeSection.querySelector('span:first-child').textContent = 'Settings';
+    document.getElementById('game-count-display').textContent = '';
+    renderSettings();
+  } else {
+    activeSection.querySelector('span:first-child').textContent = 'Game Library';
+    renderCatalog();
+  }
+}
+
+/* ===== PHASE 14: Category Tags ===== */
+function initCategories() {
+  const bar = document.getElementById('category-bar');
+  bar.innerHTML = '<button class="cat-chip active" data-cat="all"><i data-lucide="layers"></i> All</button>';
+  const usedCats = new Set();
+  GAMES.forEach(g => usedCats.add(g.cat));
+  const icons = { Action: 'zap', Puzzle: 'puzzle', Arcade: 'gamepad-2', Strategy: 'brain', Sports: 'trophy', Racing: 'car', Adventure: 'compass', Other: 'folder', Emulator: 'monitor', Music: 'music', Food: 'coffee', Animals: 'paw-print', Creative: 'palette', Retro: 'clock', Multiplayer: 'users', Shooting: 'crosshair', Sideloaded: 'upload' };
+  [...usedCats].sort().forEach(cat => {
+    const icon = icons[cat] || 'tag';
+    bar.innerHTML += '<button class="cat-chip" data-cat="' + cat + '"><i data-lucide="' + icon + '"></i> ' + cat + '</button>';
+  });
+  bar.innerHTML += '<button class="cat-chip" data-cat="favorites"><i data-lucide="heart"></i> Favorites</button>';
+  lucide.createIcons({ scope: bar });
+
+  $$('.cat-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      $$('.cat-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      const cat = chip.dataset.cat;
+      if (cat === 'favorites') renderFavorites();
+      else renderCatalog(cat === 'all' ? null : cat);
+    });
+  });
+}
+
+/* ===== PHASES 16-20: Catalog Engine ===== */
+function renderCatalog(categoryFilter) {
+  const grid = document.getElementById('catalog-grid');
+  const container = document.getElementById('catalog-container');
+  container.innerHTML = '';
+  const newContainer = document.createElement('div');
+  newContainer.id = 'catalog-container-inner';
+  const newGrid = document.createElement('div');
+  newGrid.id = 'catalog-grid';
+  newGrid.className = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4';
+  newContainer.appendChild(newGrid);
+  container.appendChild(newContainer);
+
+  const search = (document.getElementById('global-search').value || '').toLowerCase();
+  const sort = document.getElementById('sort-select').value;
+
+  if (!GAMES || !GAMES.length) { newGrid.innerHTML = '<div class="empty-state col-span-full"><i data-lucide="search-x"></i><div>No games loaded</div></div>'; lucide.createIcons({ scope: newGrid }); return; }
+  let filtered = GAMES.filter(g => {
+    if (categoryFilter && g.cat !== categoryFilter) return false;
+    if (search && !g.title.toLowerCase().includes(search) && !g.desc.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  if (sort === 'name') filtered.sort((a, b) => a.title.localeCompare(b.title));
+  else if (sort === 'name-desc') filtered.sort((a, b) => b.title.localeCompare(a.title));
+
+  document.getElementById('game-count-display').textContent = filtered.length + ' games';
+
+  if (!filtered.length) {
+    newGrid.innerHTML = '<div class="empty-state col-span-full"><i data-lucide="search-x"></i><div>No games found</div><div class="text-sm">Try a different search or category</div></div>';
+    lucide.createIcons({ scope: newGrid });
+    return;
+  }
+
+  filtered.forEach(g => {
+    const isFav = AppState.favorites.includes(g.id);
+    const card = document.createElement('div');
+    card.className = 'game-card';
+    card.dataset.id = g.id;
+    card.innerHTML =
+      '<div class="game-card-thumb"><div class="overlay"></div><span>' + g.thumb + '</span></div>' +
+      '<div class="game-card-body">' +
+        '<div class="game-card-title">' + g.title + '</div>' +
+        '<div class="game-card-cat">' + g.cat + '</div>' +
+        '<div class="game-card-footer">' +
+          '<button class="game-card-fav' + (isFav ? ' active' : '') + '" data-id="' + g.id + '" title="Toggle favorite"><i data-lucide="' + (isFav ? 'heart' : 'heart') + '" class="w-[18px] h-[18px]"></i></button>' +
+          '<button class="game-card-play" data-id="' + g.id + '">Play</button>' +
+        '</div>' +
+      '</div>';
+    card.querySelector('.game-card-play').addEventListener('click', e => { e.stopPropagation(); openTheater(g); });
+    card.querySelector('.game-card-fav').addEventListener('click', function(e) {
+      e.stopPropagation();
+      toggleFav(g.id);
+      this.classList.toggle('active');
+    });
+    card.addEventListener('click', () => openTheater(g));
+    newGrid.appendChild(card);
+  });
+  lucide.createIcons({ scope: newGrid });
+}
+
+function renderFavorites() {
+  const grid = document.getElementById('catalog-grid');
+  const container = document.getElementById('catalog-container');
+  container.innerHTML = '';
+  const newContainer = document.createElement('div');
+  newContainer.id = 'catalog-container-inner';
+  const newGrid = document.createElement('div');
+  newGrid.id = 'catalog-grid';
+  newGrid.className = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4';
+  newContainer.appendChild(newGrid);
+  container.appendChild(newContainer);
+
+  const favs = GAMES.filter(g => AppState.favorites.includes(g.id));
+  document.getElementById('game-count-display').textContent = favs.length + ' favorites';
+
+  if (!favs.length) {
+    newGrid.innerHTML = '<div class="empty-state col-span-full"><i data-lucide="heart"></i><div>No favorites yet</div><div class="text-sm">Click the heart icon on any game to add it here</div></div>';
+    lucide.createIcons({ scope: newGrid });
+    return;
+  }
+
+  favs.forEach(g => {
+    const card = document.createElement('div');
+    card.className = 'game-card';
+    card.dataset.id = g.id;
+    card.innerHTML =
+      '<div class="game-card-thumb"><div class="overlay"></div><span>' + g.thumb + '</span></div>' +
+      '<div class="game-card-body">' +
+        '<div class="game-card-title">' + g.title + '</div>' +
+        '<div class="game-card-cat">' + g.cat + '</div>' +
+        '<div class="game-card-footer">' +
+          '<button class="game-card-fav active" data-id="' + g.id + '"><i data-lucide="heart" class="w-[18px] h-[18px]"></i></button>' +
+          '<button class="game-card-play" data-id="' + g.id + '">Play</button>' +
+        '</div>' +
+      '</div>';
+    card.querySelector('.game-card-play').addEventListener('click', e => { e.stopPropagation(); openTheater(g); });
+    card.querySelector('.game-card-fav').addEventListener('click', function(e) {
+      e.stopPropagation();
+      toggleFav(g.id);
+      renderFavorites();
+    });
+    card.addEventListener('click', () => openTheater(g));
+    newGrid.appendChild(card);
+  });
+  lucide.createIcons({ scope: newGrid });
+}
+
+function toggleFav(id) {
+  const idx = AppState.favorites.indexOf(id);
+  if (idx >= 0) { AppState.favorites.splice(idx, 1); toast('Removed from favorites', 'info'); }
+  else { AppState.favorites.push(id); toast('Added to favorites!', 'success'); }
+  AppState.saveFavorites();
+  AppState._syncWidgets();
+}
+
+/* ===== PHASE 20: Search ===== */
+function initSearch() {
+  const search = document.getElementById('global-search');
+  const clear = document.getElementById('search-clear');
+  search.addEventListener('input', () => {
+    clear.classList.toggle('hidden', !search.value);
+    const activeCat = $( '.cat-chip.active');
+    const cat = activeCat ? activeCat.dataset.cat : 'all';
+    if (cat === 'favorites') renderFavorites();
+    else renderCatalog(cat === 'all' ? null : cat);
+  });
+  clear.addEventListener('click', () => {
+    search.value = '';
+    clear.classList.add('hidden');
+    const activeCat = $('.cat-chip.active');
+    const cat = activeCat ? activeCat.dataset.cat : 'all';
+    if (cat === 'favorites') renderFavorites();
+    else renderCatalog(cat === 'all' ? null : cat);
+    search.focus();
+  });
+  document.getElementById('sort-select').addEventListener('change', () => {
+    const activeCat = $('.cat-chip.active');
+    const cat = activeCat ? activeCat.dataset.cat : 'all';
+    if (cat === 'favorites') renderFavorites();
+    else renderCatalog(cat === 'all' ? null : cat);
+  });
+}
+
+let _currentGame = null;
+
+/* ===== PHASES 21-25: Theater Viewport ===== */
+function openTheater(game) {
+  _currentGame = game;
+  const theater = document.getElementById('theater-view');
+  const frame = document.getElementById('theater-frame');
+  const title = document.getElementById('theater-title');
+  theater.classList.add('open');
+  frame.src = game.url;
+  title.textContent = game.title;
+  AppState.analytics.launched++;
+  AppState.saveAnalytics();
+  document.getElementById('sidebar-game-count').textContent = GAMES.length;
+}
+
+function closeTheater() {
+  const theater = document.getElementById('theater-view');
+  const frame = document.getElementById('theater-frame');
+  theater.classList.remove('open');
+  frame.src = '';
+}
+
+function initTheater() {
+  const theater = document.getElementById('theater-view');
+  const frame = document.getElementById('theater-frame');
+  const title = document.getElementById('theater-title');
+
+  function goBack() { closeTheater(); }
+  function goFullscreen() {
+    if (frame.requestFullscreen) frame.requestFullscreen();
+    else if (frame.webkitRequestFullscreen) frame.webkitRequestFullscreen();
+    else if (frame.msRequestFullscreen) frame.msRequestFullscreen();
+  }
+  async function goDownload() {
+    const g = _currentGame;
+    if (!g) { toast('Export data not available', 'error'); return; }
+    if (g.local) {
+      try {
+        const r = await fetch(g.url);
+        const html = await r.text();
+        const blob = new Blob([html], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = g.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.html';
+        a.click();
+        URL.revokeObjectURL(url);
+        toast('Game exported: ' + g.title, 'success');
+      } catch { toast('Failed to download game file', 'error'); }
+    } else {
+      try {
+        const r = await fetch(g.url, { mode: 'no-cors' });
+        const html = await r.text();
+        const blob = new Blob([html], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = g.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.html';
+        a.click();
+        URL.revokeObjectURL(url);
+        toast('Game exported: ' + g.title, 'success');
+      } catch {
+        toast('Cannot export external games - try Sideload instead', 'error');
+      }
+    }
+  }
+  function goOpen() {
+    const g = _currentGame;
+    if (g) window.open(g.url, '_blank');
+  }
+
+  document.getElementById('theater-back').addEventListener('click', goBack);
+  document.getElementById('theater-fullscreen').addEventListener('click', goFullscreen);
+  document.getElementById('theater-download').addEventListener('click', goDownload);
+  document.getElementById('dock-back').addEventListener('click', goBack);
+  document.getElementById('dock-reload').addEventListener('click', () => { frame.src = frame.src; });
+  document.getElementById('dock-fullscreen').addEventListener('click', goFullscreen);
+  document.getElementById('dock-download').addEventListener('click', goDownload);
+  document.getElementById('dock-open').addEventListener('click', goOpen);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && theater.classList.contains('open')) closeTheater();
+  });
+
+  /* Draggable dock */
+  (function() {
+    var dock = document.querySelector('.theater-dock');
+    if (!dock) return;
+    var isDragging = false, startX, startY, origX, origY;
+    function onStart(e) {
+      isDragging = true;
+      dock.classList.add('dragging');
+      var pt = e.touches ? e.touches[0] : e;
+      startX = pt.clientX;
+      startY = pt.clientY;
+      var rect = dock.getBoundingClientRect();
+      origX = rect.left;
+      origY = rect.top;
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onEnd);
+      document.addEventListener('touchmove', onMove, { passive: true });
+      document.addEventListener('touchend', onEnd);
+    }
+    function onMove(e) {
+      if (!isDragging) return;
+      var pt = e.touches ? e.touches[0] : e;
+      var dx = pt.clientX - startX;
+      var dy = pt.clientY - startY;
+      dock.style.left = (origX + dx) + 'px';
+      dock.style.top = (origY + dy) + 'px';
+      dock.style.bottom = 'auto';
+      dock.style.transform = 'none';
+    }
+    function onEnd() {
+      isDragging = false;
+      dock.classList.remove('dragging');
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onEnd);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onEnd);
+    }
+    dock.addEventListener('mousedown', onStart);
+    dock.addEventListener('touchstart', onStart, { passive: true });
+  })();
+}
+
+/* ===== PHASES 26-30: Hidden Admin Gateway ===== */
+function initAdminGateway() {
+  let seq = [];
+  const target = ['a', '~', 'm'];
+  const overlay = document.getElementById('admin-overlay');
+  const authInput = document.getElementById('auth-passkey');
+  const authSubmit = document.getElementById('auth-submit');
+  const authCancel = document.getElementById('auth-cancel');
+  const authError = document.getElementById('auth-error');
+
+  document.addEventListener('keydown', e => {
+    seq.push(e.key);
+    if (seq.length > target.length) seq.shift();
+    if (seq.length === target.length && seq.every((k, i) => k === target[i])) {
+      seq = [];
+      overlay.classList.add('open');
+      authInput.value = '';
+      authError.textContent = '';
+      authInput.focus();
+    }
+  });
+
+  document.getElementById('admin-trigger-sidebar').addEventListener('click', () => {
+    overlay.classList.add('open');
+    authInput.value = '';
+    authError.textContent = '';
+    setTimeout(() => authInput.focus(), 100);
+  });
+
+  const authenticate = () => {
+    const passkey = authInput.value.trim();
+    if (passkey === 'roundMin+2') {
+      overlay.classList.remove('open');
+      document.getElementById('admin-panel').classList.add('open');
+      authInput.value = '';
+      AppState.adminAuthed = true;
+      AppState.saveAdminAuthed();
+      renderAdmin();
+      toast('Admin access granted', 'success');
+    } else {
+      authError.textContent = 'Invalid passkey. Access denied.';
+      authInput.classList.add('error');
+      setTimeout(() => authInput.classList.remove('error'), 500);
+    }
+  };
+
+  authSubmit.addEventListener('click', authenticate);
+  authInput.addEventListener('keydown', e => { if (e.key === 'Enter') authenticate(); });
+  authCancel.addEventListener('click', () => { overlay.classList.remove('open'); authInput.value = ''; });
+}
+
+/* ===== PHASES 31-40: Admin Panel ===== */
+function renderAdmin() {
+  const closeBtn = document.getElementById('admin-close');
+  closeBtn.addEventListener('click', () => {
+    document.getElementById('admin-panel').classList.remove('open');
+    AppState.adminAuthed = false;
+    AppState.saveAdminAuthed();
+  });
+
+  /* Tab switching */
+  $$('.admin-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      $$('.admin-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      $$('.admin-tab-content').forEach(c => c.classList.remove('active'));
+      const content = $('[data-atab-content="' + tab.dataset.atab + '"]');
+      if (content) content.classList.add('active');
+      if (tab.dataset.atab === 'analytics') renderAnalytics();
+      if (tab.dataset.atab === 'resources') renderResources();
+      if (tab.dataset.atab === 'profiles') renderSessions();
+      if (tab.dataset.atab === 'uploader') renderUploaderTab();
+    });
+  });
+
+  renderSessions();
+  renderCanvasTab();
+  renderAppearanceTab();
+}
+
+function renderSessions() {
+  const body = document.getElementById('sessions-body');
+  const count = document.getElementById('session-count');
+  const sessions = AppState.sessions;
+  count.textContent = sessions.length + ' active sessions';
+
+  if (!sessions.length) {
+    body.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text-muted)">No active sessions</td></tr>';
+    return;
+  }
+
+  body.innerHTML = sessions.map(s => {
+    const time = new Date(s.loginTime).toLocaleString();
+    return '<tr><td><span class="font-medium text-[var(--text-primary)]">' + s.handle + '</span></td><td>' + time + '</td><td><span class="text-[var(--accent-green)]">● Active</span></td><td>' + (s.gamesPlayed || 0) + '</td><td><button class="kick-btn" data-handle="' + s.handle + '">Disconnect</button></td></tr>';
+  }).join('');
+
+  body.querySelectorAll('.kick-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const handle = btn.dataset.handle;
+      AppState.sessions = AppState.sessions.filter(s => s.handle !== handle);
+      if (AppState.user === handle) {
+        AppState.user = null;
+        AppState.favorites = [];
+        AppState.saveUser();
+        AppState.saveFavorites();
+        toast('Your session has been terminated by admin', 'error');
+        setTimeout(() => location.reload(), 1500);
+      }
+      Store.set('sessions', AppState.sessions);
+      renderSessions();
+      toast('Disconnected ' + handle, 'info');
+    });
+  });
+}
+
+function renderCanvasTab() {
+  const editor = document.getElementById('admin-canvas-editor');
+  editor.value = AppState.canvas;
+  document.getElementById('canvas-update-btn').addEventListener('click', () => {
+    AppState.canvas = editor.value.trim() || 'Welcome to Cache';
+    AppState.saveCanvas();
+    const board = document.getElementById('announcement-board');
+    if (board) board.textContent = AppState.canvas;
+    toast('Broadcast canvas updated', 'success');
+  });
+}
+
+function renderResources() {
+  const cpuEl = document.getElementById('stat-cpu');
+  const memEl = document.getElementById('stat-memory');
+  const bwEl = document.getElementById('stat-bandwidth');
+  const cpuChange = document.getElementById('stat-cpu-change');
+  const memChange = document.getElementById('stat-memory-change');
+  const bwChange = document.getElementById('stat-bandwidth-change');
+
+  function updateStats() {
+    const cpu = Math.floor(Math.random() * 60) + 15;
+    const mem = Math.floor(Math.random() * 200) + 50;
+    const bw = Math.floor(Math.random() * 500) + 200;
+    cpuEl.textContent = cpu + '%';
+    memEl.textContent = mem + ' MB';
+    bwEl.textContent = bw + ' MB';
+    cpuChange.textContent = '▲ ' + Math.floor(Math.random() * 10) + '%';
+    memChange.textContent = '▼ ' + Math.floor(Math.random() * 20) + ' MB';
+    bwChange.textContent = '+ ' + Math.floor(Math.random() * 30) + ' MB';
+  }
+
+  updateStats();
+  const interval = setInterval(updateStats, 2000);
+  document.getElementById('admin-refresh').addEventListener('click', () => { updateStats(); });
+
+  /* Lockdown toggle */
+  const lockdownBtn = document.getElementById('lockdown-toggle');
+  lockdownBtn.classList.toggle('active', !!AppState.settings.lockdown);
+  lockdownBtn.addEventListener('click', () => {
+    AppState.settings.lockdown = !AppState.settings.lockdown;
+    AppState.saveSettings();
+    lockdownBtn.classList.toggle('active');
+    const banner = document.getElementById('lockdown-banner');
+    banner.classList.toggle('active', AppState.settings.lockdown);
+    if (AppState.settings.lockdown) toast('System locked down', 'error');
+    else toast('System unlocked', 'success');
+  });
+
+  window._resInterval = interval;
+}
+
+function renderAnalytics() {
+  const a = AppState.analytics;
+  document.getElementById('stat-total-sessions').textContent = a.totalSessions || 0;
+  document.getElementById('stat-total-games').textContent = a.launched || 0;
+  document.getElementById('stat-favorites-total').textContent = AppState.favorites.length;
+  document.getElementById('stat-uptime').textContent = Math.floor((Date.now() - (a.startTime || Date.now())) / 3600000) + 'h';
+}
+
+function renderAppearanceTab() {
+  $$('.color-swatch').forEach(s => {
+    s.classList.toggle('active', s.dataset.color === (AppState.settings.accent || '#2563eb'));
+    s.addEventListener('click', () => {
+      const color = s.dataset.color;
+      $$('.color-swatch').forEach(c => c.classList.remove('active'));
+      s.classList.add('active');
+      AppState.settings.accent = color;
+      document.documentElement.style.setProperty('--accent-primary', color);
+      AppState.saveSettings();
+      toast('Accent color updated', 'success');
+    });
+  });
+
+  document.getElementById('reset-colors-btn').addEventListener('click', () => {
+    AppState.settings.accent = '#2563eb';
+    AppState.saveSettings();
+    document.documentElement.style.setProperty('--accent-primary', '#2563eb');
+    $$('.color-swatch').forEach(c => c.classList.remove('active'));
+    $('.color-swatch[data-color="#2563eb"]').classList.add('active');
+    toast('Colors reset to defaults', 'info');
+  });
+}
+
+/* ===== Uploader Tab ===== */
+function renderUploaderTab() {
+  var dropzone = document.getElementById('upload-dropzone');
+  var fileInput = document.getElementById('game-file-input');
+  var browseBtn = document.getElementById('upload-browse-btn');
+  var submitBtn = document.getElementById('upload-submit-btn');
+  var status = document.getElementById('upload-status');
+  var titleInput = document.getElementById('upload-title-input');
+  var categorySelect = document.getElementById('upload-category-select');
+  var selectedFile = null;
+
+  function showStatus(msg, type) {
+    status.className = 'mt-4 p-4 rounded-xl text-sm ' + (type === 'error' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] border border-[var(--accent-primary)]/20');
+    status.innerHTML = msg;
+    status.classList.remove('hidden');
+  }
+
+  browseBtn.addEventListener('click', function() { fileInput.click(); });
+  fileInput.addEventListener('change', function() {
+    if (fileInput.files.length) {
+      selectedFile = fileInput.files[0];
+      if (!selectedFile.name.endsWith('.html')) {
+        showStatus('Only .html files are supported', 'error');
+        submitBtn.disabled = true;
+        return;
+      }
+      dropzone.style.borderColor = 'var(--accent-primary)';
+      dropzone.querySelector('div:nth-child(3)').textContent = selectedFile.name;
+      if (!titleInput.value) titleInput.value = selectedFile.name.replace(/\.html$/i, '').replace(/^cl/i, '').replace(/[-_]/g, ' ');
+      submitBtn.disabled = false;
+      showStatus('Ready to upload: ' + selectedFile.name, 'info');
+    }
+  });
+
+  dropzone.addEventListener('dragover', function(e) { e.preventDefault(); dropzone.style.borderColor = 'var(--accent-primary)'; });
+  dropzone.addEventListener('dragleave', function() { if (!selectedFile) dropzone.style.borderColor = ''; });
+  dropzone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    if (e.dataTransfer.files.length) {
+      fileInput.files = e.dataTransfer.files;
+      fileInput.dispatchEvent(new Event('change'));
+    }
+  });
+
+  submitBtn.addEventListener('click', function() {
+    if (!selectedFile) return;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Uploading...';
+    showStatus('Uploading game file to server...', 'info');
+
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var content = e.target.result;
+      var title = titleInput.value.trim() || selectedFile.name.replace(/\.html$/i, '').replace(/^cl/i, '').replace(/[-_]/g, ' ').replace(/ ?\(\d+\)/g, '').trim();
+      var cat = categorySelect.value;
+
+      fetch('/upload-game', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: selectedFile.name, content: content, title: title, category: cat })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(result) {
+        if (result.success) {
+          showStatus('Game uploaded successfully! <strong>' + title + '</strong> added to library.', 'success');
+          var newGame = { id: 'upload_' + Date.now(), title: title, cat: cat, desc: 'Uploaded game', url: result.url, thumb: title[0].toUpperCase(), embed: true, local: true };
+          if (typeof GAMES !== 'undefined') {
+            GAMES.push(newGame);
+            renderCatalog();
+            var countEl = document.getElementById('sidebar-game-count');
+            if (countEl) countEl.textContent = GAMES.length;
+          }
+          selectedFile = null;
+          fileInput.value = '';
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Upload Game';
+          dropzone.style.borderColor = '';
+          dropzone.querySelector('div:nth-child(3)').textContent = 'Drop an HTML file here or click to browse';
+        } else {
+          showStatus('Upload failed: ' + (result.error || 'Unknown error'), 'error');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Upload Game';
+        }
+      })
+      .catch(function(err) {
+        showStatus('Upload error: ' + err.message, 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Upload Game';
+      });
+    };
+    reader.readAsText(selectedFile);
+  });
+}
+
+/* ===== PHASES 41-45: Stealth Suite ===== */
+function renderStealth() {
+  const container = document.getElementById('catalog-container');
+  container.innerHTML = '';
+  const newContainer = document.createElement('div');
+  newContainer.id = 'catalog-container-inner';
+
+  newContainer.innerHTML =
+    '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">' +
+      '<div class="stat-card">' +
+        '<div class="flex items-center justify-between mb-4"><h3 class="font-semibold">Title Masking</h3><button id="title-mask-toggle" class="stealth-toggle' + (AppState.settings.titleMasked ? ' active' : '') + '"></button></div>' +
+        '<p class="text-sm text-[var(--text-secondary)]">Changes the browser tab title to simulate an academic or productivity application.</p>' +
+        '<div class="mt-3"><input type="text" id="masked-title-input" class="w-full bg-white/5 border border-[var(--glass-border)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent-cyan)] font-[\'Inter\']" placeholder="Google Docs - Home" value="' + (AppState.settings.maskedTitle || '') + '"></div>' +
+      '</div>' +
+      '<div class="stat-card">' +
+        '<div class="flex items-center justify-between mb-4"><h3 class="font-semibold">Panic Escape</h3><button id="panic-test-btn" class="px-4 py-2 rounded-lg font-medium text-sm border-none cursor-pointer" style="background:var(--accent-primary);color:#fff">Test</button></div>' +
+        '<p class="text-sm text-[var(--text-secondary)]">Instantly redirects to an educational website. Accessible via the sidebar or keyboard shortcut <kbd class="px-1 py-0.5 rounded bg-white/10 text-xs font-mono">Ctrl+Shift+P</kbd>.</p>' +
+      '</div>' +
+      '<div class="stat-card">' +
+        '<h3 class="font-semibold mb-4">Isolated Context Launcher</h3>' +
+        '<p class="text-sm text-[var(--text-secondary)] mb-3">Launches a sandboxed copy of this platform inside an about:blank window with no browsing history.</p>' +
+        '<button id="sandbox-launch-btn" class="px-4 py-2 rounded-lg font-medium text-sm border-none cursor-pointer transition-all" style="background:linear-gradient(135deg,var(--accent-purple),#5b21b6);color:#fff">Launch Sandbox</button>' +
+      '</div>' +
+      '<div class="stat-card">' +
+        '<div class="flex items-center justify-between mb-4"><h3 class="font-semibold">Browser History Deception</h3><button id="clear-traces-btn" class="px-4 py-2 rounded-lg font-medium text-sm border border-[var(--glass-border)] bg-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer font-[\'Inter\']">Clear Traces</button></div>' +
+        '<p class="text-sm text-[var(--text-secondary)]">Removes all stored runtime data, session records, and local activity traces.</p>' +
+      '</div>' +
+    '</div>';
+
+  container.appendChild(newContainer);
+  document.getElementById('active-section').querySelector('span:first-child').textContent = 'Stealth Suite';
+  document.getElementById('game-count-display').textContent = '';
+
+  /* Title masking */
+  const titleToggle = document.getElementById('title-mask-toggle');
+  const titleInput = document.getElementById('masked-title-input');
+  titleToggle.addEventListener('click', () => {
+    AppState.settings.titleMasked = !AppState.settings.titleMasked;
+    AppState.settings.maskedTitle = titleInput.value || 'Google Docs - Home';
+    titleToggle.classList.toggle('active');
+    AppState.saveSettings();
+    document.title = AppState.settings.titleMasked ? AppState.settings.maskedTitle : 'Cache';
+    toast(AppState.settings.titleMasked ? 'Title masked' : 'Title restored', 'info');
+  });
+  titleInput.addEventListener('change', () => {
+    AppState.settings.maskedTitle = titleInput.value || 'Google Docs - Home';
+    if (AppState.settings.titleMasked) document.title = AppState.settings.maskedTitle;
+    AppState.saveSettings();
+  });
+
+  /* Panic escape test */
+  document.getElementById('panic-test-btn').addEventListener('click', () => {
+    window.location.href = 'https://www.khanacademy.org';
+  });
+  document.getElementById('panic-btn-sidebar').addEventListener('click', () => {
+    window.location.href = 'https://www.khanacademy.org';
+  });
+
+  /* Sandbox launcher */
+  document.getElementById('sandbox-launch-btn').addEventListener('click', () => {
+    const w = window.open('about:blank', '_blank');
+    if (w) {
+      w.document.write('<!DOCTYPE html><html><head><title>Calculator</title><style>body{margin:0;font-family:sans-serif;background:#fff}</style></head><body><div id="sandbox-root"></div><script>' +
+        'var d=document;var c=d.getElementById("sandbox-root");var f=d.createElement("iframe");f.style="width:100vw;height:100vh;border:none";f.src="' + window.location.href + '";c.appendChild(f);' +
+        '<' + '/script></body></html>');
+      w.document.close();
+    }
+    toast('Sandbox launched in new window', 'success');
+  });
+
+  /* Clear traces */
+  document.getElementById('clear-traces-btn').addEventListener('click', () => {
+    AppState.favorites = [];
+    AppState.sessions = [];
+    AppState.analytics = { launched: 0, totalSessions: 0, startTime: Date.now() };
+    AppState.saveFavorites();
+    Store.set('sessions', []);
+    AppState.saveAnalytics();
+    toast('All local traces cleared', 'info');
+  });
+}
+
+/* ===== PHASES 46-49: Sideloader ===== */
+function renderSideloader() {
+  const container = document.getElementById('catalog-container');
+  container.innerHTML = '';
+  const newContainer = document.createElement('div');
+  newContainer.id = 'catalog-container-inner';
+  newContainer.innerHTML =
+    '<div class="max-w-2xl mx-auto">' +
+      '<div class="mb-6">' +
+        '<h3 class="text-lg font-semibold mb-2">Sideload Games</h3>' +
+        '<p class="text-sm text-[var(--text-secondary)]">Drag and drop HTML game files, SWF files, or ZIP archives to inject them directly into your library.</p>' +
+      '</div>' +
+      '<div id="drop-zone">' +
+        '<i data-lucide="upload" class="w-10 h-10"></i>' +
+        '<div><span class="font-medium">Drop files here</span> or click to browse</div>' +
+        '<div class="text-xs text-[var(--text-muted)]">Supports .html, .swf, .zip files</div>' +
+        '<input type="file" id="file-input" accept=".html,.swf,.zip" multiple style="display:none">' +
+      '</div>' +
+      '<div id="sideloaded-games" class="mt-6">' +
+        '<h4 class="text-sm font-semibold text-[var(--text-secondary)] mb-3">Sideloaded Games</h4>' +
+        '<div id="sideload-list" class="space-y-2"></div>' +
+      '</div>' +
+    '</div>';
+
+  container.appendChild(newContainer);
+  document.getElementById('active-section').querySelector('span:first-child').textContent = 'Sideload Games';
+  document.getElementById('game-count-display').textContent = '';
+
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input');
+  const sideloadList = document.getElementById('sideload-list');
+  let sideloaded = Store.get('sideloaded', []);
+
+  function renderSideloaded() {
+    if (!sideloaded.length) {
+      sideloadList.innerHTML = '<div class="text-sm text-[var(--text-muted)] text-center py-4">No sideloaded games yet</div>';
+      return;
+    }
+    sideloadList.innerHTML = sideloaded.map((g, i) =>
+      '<div class="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-[var(--glass-border)]">' +
+        '<div><div class="font-medium text-sm">' + g.title + '</div><div class="text-xs text-[var(--text-muted)]">' + g.type + ' — ' + (g.size) + '</div></div>' +
+        '<div class="flex gap-2">' +
+          '<button class="px-3 py-1.5 rounded-lg font-medium text-xs border-none cursor-pointer" style="background:var(--accent-primary);color:#fff" data-sideload-idx="' + i + '">Play</button>' +
+          '<button class="px-3 py-1.5 rounded-lg font-medium text-xs border border-[var(--glass-border)] bg-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer font-[\'Inter\']" data-remove-idx="' + i + '">Remove</button>' +
+        '</div>' +
+      '</div>'
+    ).join('');
+
+    sideloadList.querySelectorAll('[data-sideload-idx]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.sideloadIdx);
+        const g = sideloaded[idx];
+        if (!g) return;
+        const url = g.dataUrl || g.url;
+        if (url) {
+          const theater = document.getElementById('theater-view');
+          const frame = document.getElementById('theater-frame');
+          const title = document.getElementById('theater-title');
+          theater.classList.add('open');
+          frame.src = url;
+          title.textContent = g.title;
+        }
+      });
+    });
+
+    sideloadList.querySelectorAll('[data-remove-idx]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.removeIdx);
+        sideloaded.splice(idx, 1);
+        Store.set('sideloaded', sideloaded);
+        renderSideloaded();
+        toast('Sideloaded game removed', 'info');
+      });
+    });
+  }
+
+  renderSideloaded();
+
+  dropZone.addEventListener('click', () => fileInput.click());
+
+  dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+  });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    handleFiles(e.dataTransfer.files);
+  });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) handleFiles(fileInput.files);
+    fileInput.value = '';
+  });
+
+  function handleFiles(files) {
+    Array.from(files).forEach(file => {
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (!['html', 'swf', 'zip'].includes(ext)) {
+        toast('Unsupported file type: .' + ext, 'error');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const entry = {
+          id: 'sl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          title: file.name.replace(/\.[^.]+$/, ''),
+          type: '.' + ext,
+          size: (file.size / 1024).toFixed(1) + ' KB',
+          dataUrl: ext === 'html' ? e.target.result : null,
+          url: ext === 'html' ? null : null,
+          cat: 'Sideloaded',
+          embed: false,
+        };
+        sideloaded.unshift(entry);
+        Store.set('sideloaded', sideloaded);
+        renderSideloaded();
+        toast('Loaded: ' + file.name, 'success');
+      };
+      if (ext === 'html') reader.readAsDataURL(file);
+      else reader.readAsArrayBuffer(file);
+    });
+  }
+}
+
+/* ===== School Exploits ===== */
+const EXPLOITS = [
+  { cat: 'Web Proxies', items: [
+    { title: 'Google Translate Proxy', code: 'https://translate.google.com/translate?sl=auto&tl=en&u=', desc: 'Use Google Translate as a proxy — paste target URL after =' },
+    { title: 'Google Cache', code: 'https://webcache.googleusercontent.com/search?q=cache:', desc: 'View cached version of blocked sites (paste URL after :)' },
+    { title: 'Textise Dot', code: 'https://r.jina.ai/', desc: 'AI-powered text extraction from any URL' },
+    { title: 'Docs Viewer Proxy', code: 'https://docs.google.com/viewer?url=', desc: 'Use Google Docs viewer as proxy (paste URL after =)' },
+    { title: 'Archive.org Access', code: 'https://web.archive.org/web/*/', desc: 'View archived versions of blocked sites' },
+    { title: 'Bing Translate Proxy', code: 'https://www.bing.com/translator/?to=en&from=auto&text=', desc: 'Microsoft Translate can bypass some filters' },
+    { title: 'Yewtu (YouTube)', code: 'https://yewtu.be/', desc: 'Privacy-friendly YouTube frontend (often unblocked)' },
+    { title: 'Nitter (Twitter)', code: 'https://nitter.net/', desc: 'Privacy-friendly Twitter/X frontend' },
+  ]},
+  { cat: 'About:Blank Cloaking', items: [
+    { title: 'Basic Blank', code: 'javascript:void(window.open(\'about:blank\',\'_\',\'width=800,height=600\'));document.title=\'Google Docs\';', desc: 'Opens about:blank with renamed title' },
+    { title: 'Nested AboutBlank', code: 'javascript:var w=window.open(\'about:blank\');w.document.write(\'<iframe src="\'+location.href+\'" style="width:100vw;height:100vh;border:none"></iframe>\');w.document.title=\'Google Docs\';', desc: 'Mirrors current page in about:blank' },
+    { title: 'Dual Layer Cloak', code: 'javascript:var w=window.open(\'about:blank\');var d=w.document;d.write(\'<style>body{margin:0}</style><iframe src="\'+location.href+\'" style="width:100vw;height:100vh;border:none"></iframe>\');d.title=\'Google Docs - Home\';', desc: 'About:blank with style + title masking' },
+    { title: 'History Eraser', code: 'javascript:location.replace(\'about:blank\');', desc: 'Replaces current page without history entry' },
+    { title: 'Blank With Icon', code: 'javascript:var w=window.open(\'about:blank\');var d=w.document;d.write(\'<link rel="icon" href="data:,"><iframe src="\'+location.href+\'" style="width:100vw;height:100vh;border:none"></iframe>\');d.title=\'Drive\';', desc: 'About:blank with custom favicon' },
+    { title: 'Triple Nest', code: 'javascript:void(window.open("about:blank").document.write(\'<iframe src="\'+location.href+\'" style="width:100vw;height:100vh;border:none"></iframe>\')||window.open("about:blank").document.title="Classroom")', desc: 'Three layers deep cloaking' },
+    { title: 'Blank Portal (no URL)', code: 'javascript:var w=window.open();w.document.write(\'<iframe src="\'+location.href+\'" style="width:100vw;height:100vh;border:none"></iframe>\');w.document.title=\'Quiz\';', desc: 'Opens window with no URL at all' },
+    { title: 'Auto-Refresh Cloak', code: 'javascript:var w=window.open(\'about:blank\');w.document.write(\'<script>setInterval(()=>{document.title=\\"Google Docs\\"},1000);<' + '/script><iframe src="\'+location.href+\'" style="width:100vw;height:100vh;border:none"></iframe>\');', desc: 'Keeps title locked to Google Docs' },
+    { title: 'Iframe Sandbox Cloak', code: 'javascript:var w=window.open(\'about:blank\');w.document.write(\'<iframe src="\'+location.href+\'" sandbox="allow-scripts allow-same-origin" style="width:100vw;height:100vh;border:none"></iframe>\');w.document.title=\'Sheets\';', desc: 'Restricts iframe capabilities for stealth' },
+    { title: 'Data: URI Blank', code: 'javascript:window.location.href=\'data:text/html,<title>Google Docs</title><iframe src="\'+encodeURIComponent(location.href)+\'" style="width:100vw;height:100vh;border:none"></iframe>\';', desc: 'Uses data URI to mask the page source' },
+  ]},
+  { cat: 'Bookmarklets', items: [
+    { title: 'View Page Source', code: 'javascript:alert(document.documentElement.outerHTML);', desc: 'View the raw HTML source of any page' },
+    { title: 'Edit Any Page', code: 'javascript:document.body.contentEditable=\'true\';document.designMode=\'on\';void 0;', desc: 'Makes entire page editable like a text editor' },
+    { title: 'Page Revert', code: 'javascript:location.reload();', desc: 'Reloads current page (undo edits)' },
+    { title: 'Find Links', code: 'javascript:var l=document.links;var s=\'\';for(var i=0;i<l.length;i++){s+=l[i].href+\'\\n\'}alert(s);', desc: 'Lists all links on the current page' },
+    { title: 'Find Images', code: 'javascript:var i=document.images;var s=\'\';for(var x=0;x<i.length;x++){s+=i[x].src+\'\\n\'}alert(s);', desc: 'Lists all image sources on the page' },
+    { title: 'Cookie Viewer', code: 'javascript:alert(document.cookie);', desc: 'Displays all cookies for the current site' },
+    { title: 'Page Zoom In', code: 'javascript:document.body.style.zoom=parseFloat(document.body.style.zoom||1)+0.2;', desc: 'Zooms in on the page content' },
+    { title: 'Page Zoom Out', code: 'javascript:document.body.style.zoom=parseFloat(document.body.style.zoom||1)-0.2;', desc: 'Zooms out from the page content' },
+    { title: 'Remove Images', code: 'javascript:Array.from(document.images).forEach(i=>i.style.display=\'none\');', desc: 'Hides all images on the page for faster loading' },
+    { title: 'Show Passwords', code: 'javascript:Array.from(document.querySelectorAll(\'input[type="password"]\')).forEach(i=>i.type=\'text\');', desc: 'Reveals password fields as plain text' },
+    { title: 'Download Page', code: 'javascript:var a=document.createElement(\'a\');a.href=\'data:text/html,\'+encodeURIComponent(document.documentElement.outerHTML);a.download=\'page.html\';a.click();', desc: 'Downloads the current page HTML' },
+    { title: 'Screenshot Warning', code: 'javascript:alert(\'This page is being recorded for quality assurance\');', desc: 'Fake screenshot warning to deter monitoring' },
+    { title: 'Font Size Up', code: 'javascript:document.body.style.fontSize=(parseFloat(getComputedStyle(document.body).fontSize)+2)+\'px\';', desc: 'Increases page font size' },
+    { title: 'Font Size Down', code: 'javascript:document.body.style.fontSize=(parseFloat(getComputedStyle(document.body).fontSize)-2)+\'px\';', desc: 'Decreases page font size' },
+    { title: 'Gray Page', code: 'javascript:document.body.style.filter=\'grayscale(100%)\';', desc: 'Makes the page grayscale' },
+    { title: 'Invert Colors', code: 'javascript:document.body.style.filter=\'invert(100%)\';', desc: 'Inverts all page colors' },
+    { title: 'Clear Styles', code: 'javascript:document.querySelectorAll(\'link[rel="stylesheet"],style\').forEach(e=>e.remove());', desc: 'Removes all CSS styles from the page' },
+    { title: 'Dark Mode', code: 'javascript:document.body.style.background=\'#111\';document.body.style.color=\'#eee\';Array.from(document.querySelectorAll(\'*\')).forEach(e=>{e.style.background&&(e.style.background=\'#222\');e.style.color&&(e.style.color=\'#ddd\')});', desc: 'Forces dark mode on any site' },
+    { title: 'Readability Mode', code: 'javascript:document.querySelectorAll(\'nav,footer,aside,header\').forEach(e=>e.remove());', desc: 'Removes navigation and footer for clean reading' },
+    { title: 'Count Words', code: 'javascript:alert(\'Word count: \'+document.body.innerText.split(/\\s+/).length)', desc: 'Counts total words on the page' },
+    { title: 'URL QR Code', code: 'javascript:window.open(\'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=\'+encodeURIComponent(location.href));', desc: 'Generates QR code for the current page URL' },
+    { title: 'Strip Tracking', code: 'javascript:location.href=location.origin+location.pathname;', desc: 'Removes tracking parameters from the URL' },
+    { title: 'Archive This Page', code: 'javascript:window.open(\'https://web.archive.org/web/*/\'+location.href);', desc: 'Opens the Internet Archive for the current page' },
+    { title: 'Fullscreen Any Element', code: 'javascript:document.querySelector(\'video,canvas,iframe\')?.requestFullscreen?.();', desc: 'Makes any video/canvas/iframe go fullscreen' },
+    { title: 'Copy Page Text', code: 'javascript:navigator.clipboard.writeText(document.body.innerText).then(()=>alert(\'Copied!\'));', desc: 'Copies all visible text on the page' },
+    { title: 'Kill All Animations', code: 'javascript:document.querySelectorAll(\'*\').forEach(e=>{e.style.animation=\'none\';e.style.transition=\'none\'});', desc: 'Stops all CSS animations and transitions' },
+    { title: 'Page Speed Test', code: 'javascript:performance.mark(\'start\');setTimeout(()=>{performance.mark(\'end\');alert(\'Elapsed: \'+(performance.getEntriesByName(\'end\')[0].startTime-performance.getEntriesByName(\'start\')[0].startTime)+\'ms\')},0);', desc: 'Measures page load responsiveness' },
+    { title: 'Clear All Cookies', code: 'javascript:document.cookie.split(";").forEach(c=>{document.cookie=c.replace(/=.+/,`=;expires=${new Date(0).toUTCString()};path=/`)});alert(\'Cookies cleared\');', desc: 'Clears all cookies for the current site' },
+  ]},
+  { cat: 'Chrome Flags & URLs', items: [
+    { title: 'Downloads', code: 'chrome://downloads/', desc: 'View and manage downloads' },
+    { title: 'Flags Config', code: 'chrome://flags/', desc: 'Experimental Chrome features' },
+    { title: 'GPU Info', code: 'chrome://gpu/', desc: 'Graphics processing details' },
+    { title: 'DNS Settings', code: 'chrome://net-internals/#dns', desc: 'DNS management and cache clearing' },
+    { title: 'Chrome Version', code: 'chrome://version/', desc: 'Detailed browser version info' },
+    { title: 'Memory Saver', code: 'chrome://discards/', desc: 'View and control tab memory usage' },
+    { title: 'Process Manager', code: 'chrome://process-internals/', desc: 'View all Chrome processes' },
+    { title: 'Bluetooth Internals', code: 'chrome://bluetooth-internals/', desc: 'Bluetooth device adapter info' },
+    { title: 'USB Devices', code: 'chrome://usb-internals/', desc: 'Connected USB device details' },
+    { title: 'Crash Reports', code: 'chrome://crashes/', desc: 'View browser crash reports' },
+  ]},
+  { cat: 'Direct Game Sites', items: [
+    { title: 'CrazyGames', code: 'https://www.crazygames.com/', desc: 'Large library of browser games' },
+    { title: 'Poki', code: 'https://poki.com/', desc: 'Free online games collection' },
+    { title: 'CoolMathGames', code: 'https://www.coolmathgames.com/', desc: 'Classic educational games portal' },
+    { title: 'Y8.com', code: 'https://www.y8.com/', desc: 'Thousands of browser games' },
+    { title: 'Armor Games', code: 'https://armorgames.com/', desc: 'Flash and HTML5 game archive' },
+    { title: 'Game Jolt', code: 'https://gamejolt.com/', desc: 'Indie game hosting platform' },
+    { title: 'Itch.io', code: 'https://itch.io/', desc: 'Massive indie game marketplace' },
+    { title: 'Addicting Games', code: 'https://www.addictinggames.com/', desc: 'Classic web game portal' },
+    { title: 'Miniclip', code: 'https://www.miniclip.com/', desc: 'Popular multiplayer browser games' },
+    { title: 'Friv', code: 'https://www.friv.com/', desc: 'Classic game portal with grid of games' },
+    { title: 'Kiz10', code: 'https://kiz10.com/', desc: 'Cool math and brain games' },
+    { title: 'SilverGames', code: 'https://www.silvergames.com/', desc: 'High-quality browser games' },
+    { title: 'UBG100', code: 'https://ubg100.github.io/', desc: 'Unblocked games collection' },
+    { title: 'Tyrones Unblocked', code: 'https://tyronesgames.github.io/', desc: 'Popular unblocked games site' },
+    { title: '3kh0', code: 'https://3kh0.github.io/', desc: 'Large unblocked games library' },
+  ]},
+  { cat: 'URL Tricks', items: [
+    { title: 'Google Docs Viewer', code: 'https://docs.google.com/viewer?url=', desc: 'Embed any page as a PDF preview (paste URL after =)' },
+    { title: 'IP Address Direct', code: 'https://www.whatsmyip.org/', desc: 'Find IP of any site to access via IP directly' },
+    { title: 'URL Shortener Bypass', code: 'https://bit.ly/', desc: 'Shorten URLs to bypass simple filters' },
+    { title: 'Data URI Loader', code: 'javascript:window.location.href="data:text/html,<title>Google Docs</title><h1>Loading...</h1>"', desc: 'Load content directly via data URI — no URL trace' },
+    { title: 'Wayback Machine Direct', code: 'https://web.archive.org/web/20240000000000/', desc: 'Access any URL via Wayback Machine archive' },
+  ]},
+  { cat: 'DNS & Network', items: [
+    { title: 'Google DNS', code: '8.8.8.8 / 8.8.4.4', desc: 'Change to Google DNS to bypass DNS-level blocks' },
+    { title: 'Cloudflare DNS', code: '1.1.1.1 / 1.0.0.1', desc: 'Privacy-focused DNS resolver' },
+    { title: 'OpenDNS', code: '208.67.222.222 / 208.67.220.220', desc: 'Cisco OpenDNS family-safe bypass' },
+    { title: 'DNS Flush Command', code: 'ipconfig /flushdns', desc: 'Flush DNS cache (run in CMD)' },
+    { title: 'Proxy via PAC File', code: 'javascript:alert(\'Create a .pac file with: function FindProxyForURL(url,host){return "PROXY 127.0.0.1:8080";}\')', desc: 'Proxy auto-config file method' },
+  ]},
+  { cat: 'Misc Bypasses', items: [
+    { title: 'Inspect Element', code: 'javascript:alert(\'Right-click + Inspect or press Ctrl+Shift+I\')', desc: 'Opens dev tools to inspect blocked content' },
+    { title: 'Chrome App Mode', code: 'javascript:alert(\'Run in CMD: chrome.exe --app="URL" --user-data-dir="new"\')', desc: 'Launch any site as a standalone app (no URL bar)' },
+    { title: 'Incognito Mirror', code: 'javascript:alert(\'Open in incognito (Ctrl+Shift+N) — extension-based blocks often don\'t apply\')', desc: 'Incognito bypasses extension-based filters' },
+    { title: 'Save Page As', code: 'javascript:alert(\'Ctrl+S to save page, then open the local file offline\')', desc: 'Download and open blocked content offline' },
+    { title: 'QR Code Bypass', code: 'https://www.qr-code-generator.com/', desc: 'Generate QR code to access site on phone' },
+    { title: 'Chrome Guest Mode', code: 'javascript:alert(\'Open Chrome profile > Guest — no extensions, no history\')', desc: 'Guest mode bypasses extension-based filters' },
+    { title: 'Local HTML Loader', code: 'javascript:alert(\'Download game HTML files and open them locally in the browser\')', desc: 'Local files bypass all network filters' },
+    { title: 'Hosts File Edit', code: 'javascript:alert(\'Edit C:\\\\Windows\\\\System32\\\\drivers\\\\etc\\\\hosts as admin\')', desc: 'Redirect blocked domains to 127.0.0.1' },
+    { title: 'Chrome Flag Bypass', code: 'chrome://flags/#block-insecure-private-network-requests', desc: 'Disable Private Network Access blocking' },
+    { title: 'Force Dark Mode', code: 'chrome://flags/#enable-force-dark', desc: 'Force dark mode on all sites (Chrome flag)' },
+  ]},
+];
+
+function getReliability(item, cat) {
+  const c = item.code;
+  if (c.startsWith('javascript:')) return 'high';
+  if (c.startsWith('chrome://')) return 'mid';
+  if (cat === 'Web Proxies') return 'mid';
+  if (cat === 'About:Blank Cloaking' || cat === 'Bookmarklets') return 'high';
+  if (cat === 'URL Tricks') return 'mid';
+  if (cat === 'Misc Bypasses') return 'mid';
+  if (cat === 'Chrome Flags & URLs') return 'low';
+  if (cat === 'Direct Game Sites') return 'mid';
+  if (cat === 'DNS & Network') return 'low';
+  return 'mid';
+}
+
+function renderExploits() {
+  const container = document.getElementById('catalog-container');
+  container.innerHTML = '';
+  const inner = document.createElement('div');
+  inner.id = 'catalog-container-inner';
+  let html = '<div class="max-w-5xl mx-auto">';
+
+  html += '<div class="p-4 mb-6 rounded-xl border-l-4 border-[var(--accent-amber)] bg-white/5"><div class="flex gap-3"><i data-lucide="info" class="w-5 h-5 text-[var(--accent-amber)] flex-shrink-0 mt-0.5"></i><div><div class="font-medium text-sm mb-1">Reality Check</div><div class="text-xs text-[var(--text-secondary)] leading-relaxed">Not everything here will work at your school. Filters vary wildly. Bookmarklets (<span class="text-[var(--accent-green)]">high</span>) almost always work since they run client-side. Proxies and game sites (<span class="text-[var(--accent-amber)]">mid</span>) get blocked quickly. Chrome flags and DNS tricks (<span class="text-[var(--accent-primary)]">low</span>) need admin rights or specific configurations. Try the high-rated stuff first.</div></div></div>';
+
+  html += '<div class="flex gap-2 mb-6 flex-wrap items-center"><span class="text-xs text-[var(--text-muted)] mr-1">Filter:</span><button class="exploit-filter px-3 py-1.5 rounded-lg text-xs border border-[var(--glass-border)] bg-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-primary)] transition-all cursor-pointer font-[\'Inter\'] active" data-rel="all">All</button><button class="exploit-filter px-3 py-1.5 rounded-lg text-xs border border-[var(--glass-border)] bg-transparent hover:text-[var(--text-primary)] hover:border-[var(--accent-green)] transition-all cursor-pointer font-[\'Inter\']" data-rel="high" style="color:var(--accent-green)">High</button><button class="exploit-filter px-3 py-1.5 rounded-lg text-xs border border-[var(--glass-border)] bg-transparent hover:text-[var(--text-primary)] hover:border-[var(--accent-amber)] transition-all cursor-pointer font-[\'Inter\']" data-rel="mid" style="color:var(--accent-amber)">Mid</button><button class="exploit-filter px-3 py-1.5 rounded-lg text-xs border border-[var(--glass-border)] bg-transparent hover:text-[var(--text-primary)] hover:border-[var(--accent-primary)] transition-all cursor-pointer font-[\'Inter\']" data-rel="low" style="color:var(--accent-primary)">Low</button></div>';
+
+  let allItems = [];
+  EXPLOITS.forEach(group => {
+    group.items.forEach(item => {
+      item._cat = group.cat;
+      item._rel = getReliability(item, group.cat);
+      allItems.push(item);
+    });
+  });
+
+  const relLabels = { high: 'High', mid: 'Mid', low: 'Low' };
+  const relColors = { high: 'var(--accent-green)', mid: 'var(--accent-amber)', low: 'var(--accent-primary)' };
+
+  function renderItems(relFilter) {
+    let out = '';
+    EXPLOITS.forEach(group => {
+      const filtered = group.items.filter(item => !relFilter || getReliability(item, group.cat) === relFilter);
+      if (!filtered.length) return;
+      out += '<div class="mb-8"><h3 class="text-lg font-semibold mb-3 flex items-center gap-2"><i data-lucide="folder" class="w-4 h-4"></i>' + group.cat + ' <span class="text-xs text-[var(--text-muted)] font-normal">(' + filtered.length + ')</span></h3><div class="grid grid-cols-1 sm:grid-cols-2 gap-3">';
+      filtered.forEach((item) => {
+        const isUrl = item.code.startsWith('http') && !item.code.includes('javascript:');
+        const rel = getReliability(item, group.cat);
+        out += '<div class="p-4 rounded-xl bg-white/5 border border-[var(--glass-border)] hover:border-[var(--accent-primary)] transition-all" data-rel="' + rel + '">' +
+          '<div class="flex items-start justify-between gap-2 mb-2"><div class="flex items-center gap-2 min-w-0"><div class="font-medium text-sm truncate">' + item.title + '</div><span class="text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0" style="background:' + relColors[rel] + '20;color:' + relColors[rel] + '">' + relLabels[rel] + '</span></div>' +
+          '<div class="flex gap-1 flex-shrink-0">' +
+          '<button class="px-2 py-1 rounded-lg text-xs border border-[var(--glass-border)] bg-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/5 transition-all font-[\'Inter\']" data-exploit-copy="' + item.title + '" title="Copy"><i data-lucide="clipboard" class="w-3 h-3 inline"></i></button>' +
+          (isUrl ? '<button class="px-2 py-1 rounded-lg text-xs border-none cursor-pointer bg-[var(--accent-primary)] text-white hover:opacity-90 transition-all font-[\'Inter\']" data-exploit-open="' + item.title + '" title="Open"><i data-lucide="external-link" class="w-3 h-3 inline"></i></button>' : '') +
+          '</div></div>' +
+          '<div class="font-mono text-xs text-[var(--text-muted)] bg-black/20 rounded p-2 break-all mb-2" data-code="' + item.title + '">' + item.code + '</div>' +
+          '<div class="text-xs text-[var(--text-secondary)]">' + item.desc + '</div></div>';
+      });
+      out += '</div></div>';
+    });
+    return out;
+  }
+
+  html += '<div id="exploit-grid">' + renderItems(null) + '</div></div>';
+  inner.innerHTML = html;
+  container.appendChild(inner);
+  lucide.createIcons({ scope: inner });
+
+  inner.querySelectorAll('.exploit-filter').forEach(btn => {
+    btn.addEventListener('click', function() {
+      inner.querySelectorAll('.exploit-filter').forEach(b => {
+        b.style.background = '';
+        b.classList.remove('active');
+      });
+      this.style.background = 'rgba(255,255,255,0.1)';
+      this.classList.add('active');
+      const rel = this.dataset.rel;
+      document.getElementById('exploit-grid').innerHTML = renderItems(rel === 'all' ? null : rel);
+      lucide.createIcons({ scope: document.getElementById('exploit-grid') });
+      rebind();
+    });
+  });
+
+  function rebind() {
+    inner.querySelectorAll('[data-exploit-copy]').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const key = this.dataset.exploitCopy;
+        const codeEl = inner.querySelector('[data-code="' + key + '"]');
+        if (codeEl) {
+          navigator.clipboard.writeText(codeEl.textContent).then(() => { toast('Copied!', 'success'); }).catch(() => { toast('Copy failed', 'error'); });
+        }
+      });
+    });
+    inner.querySelectorAll('[data-exploit-open]').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const key = this.dataset.exploitOpen;
+        const codeEl = inner.querySelector('[data-code="' + key + '"]');
+        if (codeEl) {
+          const url = codeEl.textContent.trim();
+          if (url.startsWith('http')) window.open(url, '_blank');
+        }
+      });
+    });
+  }
+  rebind();
+}
+
+/* ===== Settings Page ===== */
+function renderSettings() {
+  const container = document.getElementById('catalog-container');
+  container.innerHTML = '';
+  const inner = document.createElement('div');
+  inner.id = 'catalog-container-inner';
+  const s = AppState.settings;
+
+  function toggle(key, label, desc, checked) {
+    return '<div class="flex items-start justify-between p-4 rounded-xl bg-white/5 border border-[var(--glass-border)] hover:border-[var(--accent-primary)] transition-all">' +
+      '<div><div class="font-medium text-sm">' + label + '</div><div class="text-xs text-[var(--text-secondary)] mt-0.5">' + desc + '</div></div>' +
+      '<button class="stealth-toggle' + (checked ? ' active' : '') + '" data-setting="' + key + '" style="flex-shrink:0;margin-top:2px"></button></div>';
+  }
+
+  function selectSetting(key, label, desc, options, current) {
+    let opts = options.map(o => '<option value="' + o.v + '"' + (o.v === current ? ' selected' : '') + '>' + o.l + '</option>').join('');
+    return '<div class="flex items-start justify-between p-4 rounded-xl bg-white/5 border border-[var(--glass-border)] hover:border-[var(--accent-primary)] transition-all">' +
+      '<div><div class="font-medium text-sm">' + label + '</div><div class="text-xs text-[var(--text-secondary)] mt-0.5">' + desc + '</div></div>' +
+      '<select class="ml-4 bg-white/10 border border-[var(--glass-border)] rounded-lg px-3 py-1.5 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)] font-[\'Inter\']" data-setting="' + key + '">' + opts + '</select></div>';
+  }
+
+  inner.innerHTML =
+    '<div class="max-w-3xl mx-auto">' +
+    '<p class="text-sm text-[var(--text-secondary)] mb-6">Customize your experience. All settings are saved locally.</p>' +
+    '<h3 class="text-lg font-semibold mb-4 flex items-center gap-2"><i data-lucide="eye" class="w-4 h-4"></i> Display</h3>' +
+    '<div class="space-y-3 mb-8">' +
+    selectSetting('cardSize', 'Card Size', 'Size of game cards in the library', [{v:'small',l:'Small'},{v:'medium',l:'Medium'},{v:'large',l:'Large'}], s.cardSize) +
+    selectSetting('layout', 'Layout', 'Grid or list layout for games', [{v:'grid',l:'Grid'},{v:'list',l:'List'}], s.layout) +
+    selectSetting('fontSize', 'Font Size', 'Global text size', [{v:'small',l:'Small'},{v:'medium',l:'Medium'},{v:'large',l:'Large'}], s.fontSize) +
+    toggle('showCat', 'Show Categories', 'Display category labels on game cards', s.showCat) +
+    toggle('showDescriptions', 'Show Descriptions', 'Display game descriptions on cards', s.showDescriptions) +
+    toggle('compactMode', 'Compact Mode', 'Tighter spacing and smaller cards', s.compactMode) +
+    toggle('reduceMotion', 'Reduce Motion', 'Disable animations and transitions', s.reduceMotion) +
+    toggle('highContrast', 'High Contrast', 'Maximum contrast for better visibility', s.highContrast) +
+    '</div>' +
+    '<h3 class="text-lg font-semibold mb-4 flex items-center gap-2"><i data-lucide="play" class="w-4 h-4"></i> Gameplay</h3>' +
+    '<div class="space-y-3 mb-8">' +
+    toggle('autoPlay', 'Auto-Play', 'Automatically open game when clicking card', s.autoPlay) +
+    toggle('confirmExit', 'Confirm Exit', 'Ask before closing the game player', s.confirmExit) +
+    toggle('launchInNewTab', 'Launch in New Tab', 'Open games in a new tab instead of the theater', s.launchInNewTab) +
+    selectSetting('defaultSort', 'Default Sort Order', 'How games are sorted by default', [{v:'default',l:'Popularity'},{v:'name',l:'Name A-Z'},{v:'name-desc',l:'Name Z-A'}], s.defaultSort) +
+    '</div>' +
+    '<h3 class="text-lg font-semibold mb-4 flex items-center gap-2"><i data-lucide="database" class="w-4 h-4"></i> Data</h3>' +
+    '<div class="space-y-3 mb-8">' +
+    '<div class="flex items-start justify-between p-4 rounded-xl bg-white/5 border border-[var(--glass-border)] hover:border-[var(--accent-primary)] transition-all">' +
+    '<div><div class="font-medium text-sm">Export All Data</div><div class="text-xs text-[var(--text-secondary)] mt-0.5">Download your settings, favorites, and profile as JSON</div></div>' +
+    '<button id="export-data-btn" class="px-4 py-2 rounded-lg font-medium text-xs border-none cursor-pointer transition-all" style="background:var(--accent-primary);color:#fff;flex-shrink:0;margin-top:2px">Export</button></div>' +
+    '<div class="flex items-start justify-between p-4 rounded-xl bg-white/5 border border-[var(--glass-border)] hover:border-[var(--accent-primary)] transition-all">' +
+    '<div><div class="font-medium text-sm">Import Data</div><div class="text-xs text-[var(--text-secondary)] mt-0.5">Restore data from a previous export file</div></div>' +
+    '<button id="import-data-btn" class="px-4 py-2 rounded-lg font-medium text-xs border border-[var(--glass-border)] bg-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer font-[\'Inter\']" style="flex-shrink:0;margin-top:2px">Import</button></div>' +
+    '<div class="flex items-start justify-between p-4 rounded-xl bg-white/5 border border-[var(--glass-border)] hover:border-[var(--accent-primary)] transition-all">' +
+    '<div><div class="font-medium text-sm">Clear All Data</div><div class="text-xs text-[var(--text-secondary)] mt-0.5">Reset everything — settings, favorites, sessions</div></div>' +
+    '<button id="clear-data-btn" class="px-4 py-2 rounded-lg font-medium text-xs border border-[var(--glass-border)] bg-transparent text-[var(--accent-primary)] hover:bg-[var(--accent-primary)] hover:text-white transition-all cursor-pointer font-[\'Inter\']" style="flex-shrink:0;margin-top:2px">Clear</button></div>' +
+    '</div>' +
+    '</div>';
+
+  container.appendChild(inner);
+  lucide.createIcons({ scope: inner });
+
+  inner.querySelectorAll('[data-setting]').forEach(el => {
+    el.addEventListener('change', function() {
+      const key = this.dataset.setting;
+      const val = this.type === 'checkbox' || this.classList.contains('stealth-toggle') ? this.classList.contains('active') : this.value;
+      if (this.classList.contains('stealth-toggle')) {
+        this.classList.toggle('active');
+        AppState.settings[key] = this.classList.contains('active');
+      } else {
+        AppState.settings[key] = val;
+      }
+      AppState.saveSettings();
+      toast('Setting updated: ' + key, 'info');
+    });
+  });
+
+  document.getElementById('export-data-btn').addEventListener('click', () => {
+    const data = { user: AppState.user, favorites: AppState.favorites, settings: AppState.settings, analytics: AppState.analytics, canvas: AppState.canvas, exportedAt: new Date().toISOString() };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'cache_backup.json'; a.click();
+    URL.revokeObjectURL(url);
+    toast('Data exported', 'success');
+  });
+
+  document.getElementById('import-data-btn').addEventListener('click', () => {
+    const input = document.createElement('input'); input.type = 'file'; input.accept = '.json';
+    input.onchange = function(e) {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        try {
+          const data = JSON.parse(ev.target.result);
+          if (data.user) AppState.user = data.user;
+          if (data.favorites) AppState.favorites = data.favorites;
+          if (data.settings) Object.assign(AppState.settings, data.settings);
+          if (data.analytics) Object.assign(AppState.analytics, data.analytics);
+          if (data.canvas) AppState.canvas = data.canvas;
+          AppState._save();
+          AppState._syncWidgets();
+          AppState._applySettings();
+          toast('Data imported successfully', 'success');
+        } catch { toast('Invalid backup file', 'error'); }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  });
+
+  document.getElementById('clear-data-btn').addEventListener('click', () => {
+    if (confirm('Are you sure you want to clear all stored data? This cannot be undone.')) {
+      Store.clear();
+      AppState.favorites = [];
+      AppState.sessions = [];
+      AppState.analytics = { launched: 0, totalSessions: 0, startTime: Date.now() };
+      AppState._syncWidgets();
+      toast('All data cleared', 'info');
+    }
+  });
+}
+
+/* ===== PHASE 50: Application Init ===== */
+window.initApp = function initApp() {
+  AppState._applySettings();
+  initNav();
+  initCategories();
+  initSearch();
+  initTheater();
+  initAdminGateway();
+  renderCatalog();
+  document.getElementById('sidebar-game-count').textContent = GAMES.length;
+  loadAllGames().then(function(games){
+    if (games && games.length) {
+      GAMES = games;
+      initCategories();
+      renderCatalog();
+      document.getElementById('sidebar-game-count').textContent = GAMES.length;
+      toast('Loaded ' + GAMES.length + ' games', 'success');
+    }
+  }).catch(function(){});
+}
+
+/* ===== Boot Sequence ===== */
+document.addEventListener('DOMContentLoaded', function() {
+  if (lucide.createIcons) try { lucide.createIcons(); } catch(e) {}
+
+  /* Restore stored user BEFORE initGateway so returning users skip the gate */
+  const storedUser = Store.get('user', null);
+  if (storedUser) AppState.user = storedUser;
+
+  initGateway();
+
+  /* Auto-open admin panel if previously authenticated */
+  if (AppState.adminAuthed) {
+    document.getElementById('admin-panel').classList.add('open');
+  }
+});
+
+/* ===== Global keyboard shortcuts ===== */
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.shiftKey && e.key === 'P') {
+    window.location.href = 'https://www.khanacademy.org';
+  }
+});
+})();
+</script>
+</body>
+</html>

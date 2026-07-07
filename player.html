@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Loading...</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+.toolbar{display:flex;align-items:center;background:#1a1a3e;padding:8px 20px;color:#eee;position:relative;z-index:10;gap:12px;min-height:44px}
+.toolbar a{color:#aaa;text-decoration:none;font-size:.85rem;display:flex;align-items:center;gap:4px;transition:color .2s;flex-shrink:0}
+.toolbar a:hover{color:#e94560}
+.toolbar .title{font-size:.9rem;font-weight:600;color:#e94560;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;text-align:center}
+.toolbar .actions{display:flex;gap:8px;flex-shrink:0}
+.toolbar button{background:none;border:1px solid #2a2a5e;color:#aaa;cursor:pointer;font-size:.8rem;padding:4px 12px;border-radius:4px;transition:all .2s}
+.toolbar button:hover{color:#e94560;border-color:#e94560;background:rgba(233,69,96,0.1)}
+iframe{border:none;width:100vw;height:calc(100vh - 44px);display:block}
+.fallback{display:none;align-items:center;justify-content:center;height:calc(100vh - 44px);color:#aaa;text-align:center;padding:20px;flex-direction:column;gap:12px}
+.fallback a{color:#e94560}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <a href="index.html">&larr; Back</a>
+  <span class="title" id="gameTitle">Loading...</span>
+  <div class="actions">
+    <button onclick="goFullscreen()" title="Fullscreen">⛶</button>
+    <button onclick="openDirect()" title="Open directly">↗</button>
+  </div>
+</div>
+<iframe id="gameFrame" allowfullscreen></iframe>
+<div class="fallback" id="fallback">
+  <p>Game couldn't load in viewer.</p>
+  <a id="directLink" target="_blank">Open directly</a>
+</div>
+<script>
+const params = new URLSearchParams(location.search);
+const game = params.get('g');
+const title = params.get('t') || '';
+if (game) {
+  const frame = document.getElementById('gameFrame');
+  frame.src = game;
+  const displayTitle = title || game.replace(/^cl/,'').replace(/\.html$/,'');
+  document.title = displayTitle;
+  document.getElementById('gameTitle').textContent = displayTitle;
+  document.getElementById('directLink').href = game;
+
+  // If iframe fails to load (file:// restrictions), show fallback
+  frame.onerror = function() { showFallback(); };
+  let loaded = false;
+  frame.onload = function() { loaded = true; };
+  setTimeout(function() {
+    if (!loaded) showFallback();
+  }, 5000);
+} else {
+  document.getElementById('gameTitle').textContent = 'No game specified';
+}
+function showFallback() {
+  document.getElementById('gameFrame').style.display = 'none';
+  document.getElementById('fallback').style.display = 'flex';
+}
+function goFullscreen() {
+  const el = document.getElementById('gameFrame');
+  if (el.requestFullscreen) el.requestFullscreen();
+  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  else if (el.msRequestFullscreen) el.msRequestFullscreen();
+}
+function openDirect() {
+  if (game) window.open(game, '_blank');
+}
+</script>
+</body>
+</html>
