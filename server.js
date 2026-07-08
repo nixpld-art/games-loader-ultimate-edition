@@ -48,7 +48,7 @@ const server = http.createServer((req, res) => {
         const title = data.title || filename.replace(/\.html$/i, '');
         const category = data.category || 'Sideloaded';
 
-        const filePath = path.join(ROOT, filename);
+        const filePath = path.join(ROOT, 'games', filename);
         fs.writeFileSync(filePath, content, 'utf8');
 
         const gamesJsonPath = path.join(ROOT, 'games-data.json');
@@ -103,7 +103,7 @@ const server = http.createServer((req, res) => {
             games = games.filter(g => g.f !== data.filename);
             fs.writeFileSync(gamesJsonPath, JSON.stringify(games), 'utf8');
             
-            const filePath = path.join(ROOT, data.filename);
+            const filePath = path.join(ROOT, 'games', data.filename);
             if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
             
             res.writeHead(200); res.end(JSON.stringify({success: true}));
