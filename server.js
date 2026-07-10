@@ -356,18 +356,30 @@ function saveApiKey(key) {
   try { fs.writeFileSync(path.join(ROOT, 'api-key.txt'), '[ENC]' + Buffer.from(key, 'utf8').toString('base64'), 'utf8'); } catch(e) {}
 }
 
+var _lastWorkingModel = null;
+
+function delay(ms) { return new Promise(function(r){setTimeout(r, ms)}); }
+
 async function callOpenRouter(messages, apiKey) {
-  var models = apiKey
-    ? ['openai/gpt-4o-mini', 'google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free']
-    : ['google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free', 'tencent/hy3:free'];
+  var paidModels = apiKey ? ['openai/gpt-4o-mini'] : [];
+  var freeModels = [
+    'tencent/hy3:free', 'google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free',
+    'meta-llama/llama-3.3-70b-instruct:free', 'qwen/qwen3-coder:free',
+    'liquid/lfm-2.5-1.2b-instruct:free', 'nousresearch/hermes-3-llama-3.1-405b:free',
+    'nvidia/nemotron-3-nano-30b-a3b:free', 'cognitivecomputations/dolphin-mistral-24b-venice-edition:free'
+  ];
+  var models = paidModels.concat(freeModels);
+  if (_lastWorkingModel) {
+    var idx = models.indexOf(_lastWorkingModel);
+    if (idx > 0) { models.splice(idx, 1); models.unshift(_lastWorkingModel); }
+  }
   for (var mi = 0; mi < models.length; mi++) {
     try {
+      if (mi > 0) await delay(1500);
       const ac = new AbortController();
-      setTimeout(function(){try{ac.abort()}catch(e){}}, 25000);
-      var headers = { 'Content-Type': 'application/json' };
+      setTimeout(function(){try{ac.abort()}catch(e){}}, 30000);
+      var headers = { 'Content-Type': 'application/json', 'HTTP-Referer': 'http://localhost:8080', 'X-Title': 'Cache' };
       if (apiKey) headers['Authorization'] = 'Bearer ' + apiKey;
-      headers['HTTP-Referer'] = 'http://localhost:8080';
-      headers['X-Title'] = 'Cache';
       const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST', headers: headers,
         body: JSON.stringify({ model: models[mi], messages: messages, max_tokens: 512, temperature: 0.7 }),
@@ -376,8 +388,8 @@ async function callOpenRouter(messages, apiKey) {
       if (res.ok) {
         const d = await res.json();
         var r = d.choices?.[0]?.message?.content?.trim() || null;
-        if (r) return r;
-      }
+        if (r) { _lastWorkingModel = models[mi]; return r; }
+      } else if (res.status === 429) { continue; }
     } catch(e) { continue; }
   }
   return null;
@@ -444,18 +456,26 @@ const server = http.createServer(async (req, res) => {
         const data = JSON.parse(body);
         const messages = data.messages || [];
         var apiKey = loadApiKey();
-        var freeModels = ['google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free', 'tencent/hy3:free'];
-        var modelsToTry = apiKey ? ['openai/gpt-4o-mini'].concat(freeModels) : freeModels;
+        var cacheModels = [
+          'tencent/hy3:free', 'google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free',
+          'meta-llama/llama-3.3-70b-instruct:free', 'qwen/qwen3-coder:free',
+          'liquid/lfm-2.5-1.2b-instruct:free', 'nousresearch/hermes-3-llama-3.1-405b:free',
+          'nvidia/nemotron-3-nano-30b-a3b:free'
+        ];
+        if (apiKey) cacheModels.unshift('openai/gpt-4o-mini');
+        if (_lastWorkingModel && _lastWorkingModel !== cacheModels[0]) {
+          var ci = cacheModels.indexOf(_lastWorkingModel);
+          if (ci > 0) { cacheModels.splice(ci, 1); cacheModels.unshift(_lastWorkingModel); }
+        }
         var reply = null;
-        for (var mi = 0; mi < modelsToTry.length; mi++) {
-          var model = modelsToTry[mi];
+        for (var mi = 0; mi < cacheModels.length; mi++) {
+          var model = cacheModels[mi];
           try {
+            if (mi > 0) await delay(1500);
             const ac = new AbortController();
-            setTimeout(function(){try{ac.abort()}catch(e){}}, 20000);
-            var headers = { 'Content-Type': 'application/json' };
+            setTimeout(function(){try{ac.abort()}catch(e){}}, 30000);
+            var headers = { 'Content-Type': 'application/json', 'HTTP-Referer': 'http://localhost:8080', 'X-Title': 'Cache' };
             if (apiKey) headers['Authorization'] = 'Bearer ' + apiKey;
-            headers['HTTP-Referer'] = 'http://localhost:8080';
-            headers['X-Title'] = 'Cache';
             const orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
               method: 'POST', headers: headers,
               body: JSON.stringify({ model: model, messages: messages, max_tokens: 512, temperature: 0.7 }),
@@ -464,8 +484,8 @@ const server = http.createServer(async (req, res) => {
             if (orRes.ok) {
               const d = await orRes.json();
               var r = d.choices?.[0]?.message?.content?.trim() || null;
-              if (r) { reply = r; break; }
-            }
+              if (r) { _lastWorkingModel = model; reply = r; break; }
+            } else if (orRes.status === 429) { continue; }
           } catch(e) { continue; }
         }
         if (reply) { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ choices: [{ message: { role: 'assistant', content: reply } }] })); return; }
