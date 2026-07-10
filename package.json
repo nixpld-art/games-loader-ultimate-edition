@@ -1,0 +1,13 @@
+{
+  "name": "cache-games",
+  "version": "4.0.0",
+  "description": "Cache - Game Library with Proxy",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "yt-search": "^2.13.1"
+  }
+}

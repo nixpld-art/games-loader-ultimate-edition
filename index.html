@@ -1,1301 +1,572 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Cache</title>
-<link rel="manifest" href="/manifest.json">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='8' fill='%232563eb'/%3E%3Ctext x='32' y='44' font-size='40' font-weight='bold' fill='white' text-anchor='middle' font-family='sans-serif'%3EC%3C/text%3E%3C/svg%3E">
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/lucide@latest"></script>
-<style>
-:root{--accent-primary:#2563eb;--accent-cyan:#06b6d4;--accent-green:#10b981;--accent-amber:#f59e0b;--accent-purple:#8b5cf6;--accent-red:#ef4444;--bg-obsidian-900:#0a0a1a;--bg-obsidian-800:#12122a;--bg-obsidian-700:#1a1a3e;--text-primary:#f0f0f0;--text-secondary:#a0a0c0;--text-muted:#6b6b8a;--glass-bg:rgba(18,18,42,0.6);--glass-border:rgba(255,255,255,0.06);--glass-strong:rgba(18,18,42,0.9);--card-radius:16px;--card-gap:16px;--font-scale:1;--anim-speed:0.3s}
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg-obsidian-900);color:var(--text-primary);font-family:'Inter',sans-serif;overflow-x:hidden;min-height:100vh}
-::-webkit-scrollbar{width:4px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.06);border-radius:2px}
-::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.12)}
-.x-scroll{scrollbar-width:none;-ms-overflow-style:none}
-.x-scroll::-webkit-scrollbar{display:none}
-.glass{background:var(--glass-bg);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--glass-border);border-radius:16px}
-.glass-strong{background:var(--glass-strong);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid var(--glass-border);border-radius:20px}
-.game-card{background:var(--glass-bg);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--glass-border);border-radius:var(--card-radius);overflow:hidden;transition:all var(--anim-speed) cubic-bezier(0.4,0,0.2,1);cursor:pointer}
-.game-card:hover{transform:translateY(-6px);box-shadow:0 12px 40px rgba(37,99,235,0.2);border-color:var(--accent-primary)}
-.game-card-thumb{width:100%;aspect-ratio:16/9;background:linear-gradient(135deg,var(--bg-obsidian-700),var(--bg-obsidian-800));display:flex;align-items:center;justify-content:center;font-size:2.5rem;position:relative;overflow:hidden}
-.game-card-thumb .overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(10,10,26,0.8),transparent 50%);opacity:0;transition:opacity var(--anim-speed)}
-.game-card:hover .overlay{opacity:1}
-.game-card-body{padding:12px 14px 14px}
-.game-card-title{font-size:0.9rem;font-weight:600;color:var(--text-primary);margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
-.game-card-cat{font-size:0.7rem;color:var(--text-secondary);margin-bottom:8px}
-.game-card-footer{display:flex;justify-content:space-between;align-items:center}
-.game-card-fav{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:4px;border-radius:8px;transition:all var(--anim-speed)}
-.game-card-fav:hover{color:var(--accent-primary);background:rgba(37,99,235,0.1)}
-.game-card-fav.active{color:var(--accent-primary)}
-.game-card-play{background:var(--accent-primary);border:none;border-radius:8px;color:#fff;font-size:0.75rem;font-weight:600;padding:6px 14px;cursor:pointer;transition:all var(--anim-speed);font-family:'Inter',sans-serif}
-.game-card-play:hover{background:#1d4ed8;transform:scale(1.05)}
-.cat-chip{padding:6px 18px;border-radius:20px;font-size:0.8rem;cursor:pointer;white-space:nowrap;transition:all var(--anim-speed);background:var(--glass-bg);border:1px solid var(--glass-border);color:var(--text-secondary);font-family:'Inter',sans-serif}
-.cat-chip:hover{background:rgba(37,99,235,0.1);color:var(--text-primary)}
-.cat-chip.active{background:var(--accent-primary);color:#fff;border-color:var(--accent-primary)}
-#theater-view{position:fixed;inset:0;z-index:1000;background:var(--bg-obsidian-900);display:none;flex-direction:column;animation:fadeIn 0.3s ease-out}
-#theater-view.open{display:flex}
-.theater-toolbar{display:flex;align-items:center;padding:8px 16px;gap:12px;background:rgba(10,10,26,0.95);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-bottom:1px solid var(--glass-border);min-height:48px;z-index:10}
-.theater-toolbar .title{flex:1;font-size:0.9rem;font-weight:600;text-align:center;color:var(--text-primary)}
-.theater-toolbar button{background:none;border:none;color:var(--text-secondary);cursor:pointer;padding:6px 10px;border-radius:8px;transition:all 0.2s;font-size:0.8rem;font-family:'Inter',sans-serif}
-.theater-toolbar button:hover{color:var(--text-primary);background:rgba(255,255,255,0.05)}
-.theater-frame{flex:1;border:none;width:100%;background:#000}
-.theater-dock{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:8px;padding:10px 20px;border-radius:50px;background:rgba(10,10,26,0.9);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid var(--glass-border);z-index:10;align-items:center;cursor:grab;user-select:none}
-.theater-dock button{background:none;border:none;color:var(--text-secondary);cursor:pointer;padding:8px;border-radius:50%;transition:all 0.2s}
-.theater-dock button:hover{color:var(--text-primary);background:rgba(255,255,255,0.1)}
-.theater-dock button svg{width:20px;height:20px}
-#admin-overlay{position:fixed;inset:0;z-index:9980;background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center}
-#admin-overlay.open{display:flex}
-#admin-overlay .modal{max-width:400px;width:90%;padding:32px;border-radius:20px}
-#admin-panel{position:fixed;inset:0;z-index:9990;background:var(--bg-obsidian-900);display:none;flex-direction:column}
-#admin-panel.open{display:flex}
-.admin-header{display:flex;align-items:center;padding:16px 24px;gap:12px;background:rgba(10,10,26,0.95);backdrop-filter:blur(24px);border-bottom:1px solid var(--glass-border)}
-.admin-header h2{flex:1;font-size:1.1rem;font-weight:700}
-.admin-header button{background:var(--glass-bg);border:1px solid var(--glass-border);color:var(--text-secondary);padding:6px 14px;border-radius:8px;cursor:pointer;font-size:0.8rem;font-family:'Inter',sans-serif;transition:all 0.2s}
-.admin-header button:hover{color:var(--text-primary);background:rgba(255,255,255,0.05)}
-.admin-tabs{display:flex;gap:4px;padding:12px 24px;background:rgba(10,10,26,0.95);border-bottom:1px solid var(--glass-border);overflow-x:auto}
-.admin-tab{padding:8px 18px;border-radius:10px;font-size:0.8rem;font-weight:500;cursor:pointer;transition:all 0.2s;background:transparent;border:none;color:var(--text-muted);white-space:nowrap;font-family:'Inter',sans-serif}
-.admin-tab:hover{color:var(--text-primary);background:rgba(255,255,255,0.05)}
-.admin-tab.active{background:var(--accent-primary);color:#fff}
-.admin-content{flex:1;overflow-y:auto;padding:24px}
-.admin-tab-content{display:none}
-.admin-tab-content.active{display:block}
-.admin-table{width:100%;border-collapse:collapse;font-size:0.85rem}
-.admin-table th{padding:10px 12px;text-align:left;color:var(--text-muted);font-weight:600;border-bottom:1px solid var(--glass-border)}
-.admin-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.03)}
-.stat-card{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:16px;padding:20px;text-align:center}
-.stat-value{font-size:2rem;font-weight:800;color:var(--text-primary)}
-.stat-label{font-size:0.8rem;color:var(--text-secondary);margin-top:4px}
-.auth-input{width:100%;padding:14px 18px;border-radius:12px;border:1px solid var(--glass-border);background:rgba(0,0,0,0.3);color:var(--text-primary);font-size:1rem;outline:none;transition:border var(--anim-speed);font-family:'Inter',sans-serif}
-.auth-input:focus{border-color:var(--accent-primary)}
-.auth-input.error{border-color:var(--accent-red)}
-.auth-error{color:var(--accent-red);font-size:0.8rem;margin-top:8px;min-height:20px}
-.stealth-row{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:rgba(255,255,255,0.03);border-radius:12px;margin-bottom:8px}
-.stealth-toggle{position:relative;width:44px;height:24px;background:var(--glass-border);border-radius:12px;cursor:pointer;transition:all 0.3s;border:none;padding:0;flex-shrink:0}
-.stealth-toggle.active{background:var(--accent-green)}
-.stealth-toggle::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:transform 0.3s}
-.stealth-toggle.active::after{transform:translateX(20px)}
-#panic-overlay{position:fixed;inset:0;z-index:99999;background:#fff;display:none}
-#panic-overlay.active{display:block}
-#toast-container{position:fixed;top:80px;right:20px;z-index:10000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
-.toast{padding:12px 20px;background:var(--glass-strong);backdrop-filter:blur(24px);border:1px solid var(--glass-border);border-radius:12px;color:var(--text-primary);font-size:0.85rem;animation:slideDown 0.3s ease-out;pointer-events:auto;display:flex;align-items:center;gap:8px;min-width:250px}
-.toast svg{width:18px;height:18px}
-.toast.success{border-left:3px solid var(--accent-green)}
-.toast.error{border-left:3px solid var(--accent-primary)}
-.toast.info{border-left:3px solid var(--accent-cyan)}
-.exp-bar{height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;flex:1}
-.exp-fill{height:100%;background:linear-gradient(90deg,var(--accent-primary),var(--accent-cyan));border-radius:3px;transition:width 0.5s ease}
-.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:var(--text-muted);gap:12px}
-.empty-state svg{width:48px;height:48px;opacity:0.3}
-#drop-zone{min-height:180px;border:2px dashed var(--glass-border);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;cursor:pointer;color:var(--text-secondary);font-size:0.9rem;transition:all 0.3s}
-#drop-zone:hover,#drop-zone.drag-over{border-color:var(--accent-primary);background:rgba(37,99,235,0.05);color:var(--text-primary)}
-.color-swatch{width:36px;height:36px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:all 0.2s}
-.color-swatch:hover{transform:scale(1.15)}
-.color-swatch.active{border-color:#fff;box-shadow:0 0 20px rgba(255,255,255,0.2)}
-.compact .game-card-thumb{aspect-ratio:auto;height:60px;font-size:1.2rem}
-.compact .game-card-body{padding:6px 10px}
-.compact .game-card-title{font-size:0.75rem}
-.compact .game-card-cat{font-size:0.6rem;margin-bottom:4px}
-.compact #catalog-grid{gap:8px}
-.compact .game-card-play{font-size:0.65rem;padding:4px 10px}
-.lowdata .game-card-thumb{background:var(--bg-obsidian-800)}
-.lowdata .game-card-thumb span{font-size:1.2rem}
-.lowdata .cat-chip{font-size:0.7rem;padding:4px 12px}
-.lowdata .sidebar-link{font-size:0.8rem;padding:8px 12px}
-.lowdata #global-search{font-size:0.8rem;padding:8px 12px}
-.lowdata .stat-card{padding:12px}
-.lowdata .stat-value{font-size:1.4rem}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-@keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
-@keyframes slideDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
-@keyframes slideIn{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
-@media(max-width:768px){
-  .sidebar{width:100%;z-index:50}
-  .admin-tabs{overflow-x:auto;padding:8px 12px}
-  .admin-tab{font-size:0.75rem;padding:6px 12px}
-}
-</style>
+<link rel="shortcut icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='8' fill='%2300d4aa'/%3E%3Ctext x='32' y='44' font-size='40' font-weight='bold' fill='white' text-anchor='middle' font-family='sans-serif'%3EC%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script src="search.js"></script>
+<script src="proxy.js"></script>
 </head>
 <body>
+<canvas id="bg-canvas"></canvas>
 
-<div id="broadcast-banner" style="position:fixed;top:0;left:0;width:100%;z-index:99999;background:var(--accent-red);color:white;text-align:center;padding:10px;font-weight:bold;display:none;font-family:'Inter',sans-serif"></div>
+<div id="loading-screen">
+<div class="loader">Cache</div>
+<p>loading your experience...</p>
+</div>
+
+<div id="broadcast-banner"></div>
 <div id="panic-overlay"></div>
 
-<div id="gateway-overlay" style="position:fixed;inset:0;z-index:9000;background:var(--bg-obsidian-900);display:flex;align-items:center;justify-content:center">
-  <div class="glass-strong" style="max-width:420px;width:90%;padding:40px;text-align:center;animation:slideUp 0.6s ease-out">
-    <div style="font-size:3.5rem;margin-bottom:12px;font-weight:800;background:linear-gradient(135deg,var(--accent-primary),var(--accent-cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent">Cache</div>
-    <div style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:24px">Enter your handle to begin</div>
-    <input id="username-input" class="auth-input" placeholder="Your handle" maxlength="20" autocomplete="off" style="text-align:center;margin-bottom:12px">
-    <div id="gateway-error" style="color:var(--accent-red);font-size:0.8rem;margin-bottom:8px;min-height:20px"></div>
-    <button id="gateway-submit" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent-primary),var(--accent-cyan));color:#fff;font-size:1rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif">Enter Cache</button>
-    <div style="margin-top:16px;font-size:0.75rem;color:var(--text-muted)">v3.0 — All games loaded: <span id="gateway-game-count">0</span></div>
-  </div>
+<!-- Patch Notes Modal -->
+<div id="patchModal" class="modal-overlay hidden">
+<div class="modal modal-patch">
+<div class="modal-patch-header">
+<h3>What's New</h3>
+<button id="patchClose" class="modal-btn ghost">&times;</button>
+</div>
+<div class="modal-patch-body">
+<div class="patch-entry">
+<span class="patch-tag patch-change">Change</span>
+<strong>Brand New Look</strong>
+<span class="patch-date">Jul 2026</span>
+<p>Cache now features a redesigned interface with smoother performance.</p>
+</div>
+</div>
+<div class="modal-actions">
+<button id="patchGotIt" class="modal-btn primary">Got it</button>
+</div>
+</div>
 </div>
 
-<div id="app-wrapper" style="display:none;min-height:100vh">
-  <div id="sidebar" class="glass" style="position:fixed;top:0;left:0;width:240px;height:100vh;z-index:40;border-radius:0;border-right:1px solid var(--glass-border);display:flex;flex-direction:column;padding:20px 0;overflow-y:auto;transition:transform 0.3s ease">
-    <div style="padding:0 20px;margin-bottom:24px">
-      <div style="font-size:1.5rem;font-weight:800;background:linear-gradient(135deg,var(--accent-primary),var(--accent-cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent">Cache</div>
-    </div>
-    <div style="padding:0 12px;margin-bottom:16px">
-      <div id="profile-name" style="font-size:0.9rem;font-weight:600;color:var(--text-primary)">Guest</div>
-      <div id="tier-badge" style="font-size:0.7rem;color:var(--text-muted);margin-top:2px"></div>
-    </div>
-    <div style="flex:1;padding:0 12px">
-      <div class="sidebar-link" data-section="catalog" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;cursor:pointer;color:var(--text-secondary);font-size:0.85rem;transition:all 0.2s;margin-bottom:2px">&#x1F3AE; Catalog</div>
-      <div class="sidebar-link" data-section="sideloader" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;cursor:pointer;color:var(--text-secondary);font-size:0.85rem;transition:all 0.2s;margin-bottom:2px">&#x2B06; Sideload</div>
-      <div class="sidebar-link" data-section="stealth" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;cursor:pointer;color:var(--text-secondary);font-size:0.85rem;transition:all 0.2s;margin-bottom:2px">&#x1F6E1; Stealth</div>
-      <div class="sidebar-link" data-section="exploits" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;cursor:pointer;color:var(--text-secondary);font-size:0.85rem;transition:all 0.2s;margin-bottom:2px">&#x1F513; Exploits</div>
-      <div class="sidebar-link" data-section="pomodoro" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;cursor:pointer;color:var(--text-secondary);font-size:0.85rem;transition:all 0.2s;margin-bottom:2px">&#x23F1; Focus</div>
-      <div class="sidebar-link" data-section="settings" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;cursor:pointer;color:var(--text-secondary);font-size:0.85rem;transition:all 0.2s;margin-bottom:2px">&#x2699; Settings</div>
-      <div id="panic-btn-sidebar" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;cursor:pointer;color:var(--accent-primary);font-size:0.85rem;transition:all 0.2s">&#x26A0; Panic</div>
-    </div>
-    <div style="padding:0 20px;margin-top:auto">
-      <div style="font-size:0.65rem;color:var(--text-muted)">Cache v3.0</div>
-      <div style="font-size:0.65rem;color:var(--text-muted);margin-top:2px">Games: <span id="sidebar-game-count">0</span></div>
-      <div id="fps-counter" style="font-size:0.6rem;color:var(--text-muted);margin-top:2px;display:none">FPS: <span id="fps-value">--</span></div>
-    </div>
-  </div>
+<div id="app">
+<nav id="navbar">
+<div class="nav-brand">
+<span class="nav-logo">Cache</span>
+</div>
+<div class="nav-center">
+<button class="nav-tab active" data-view="home">Home</button>
+<button class="nav-tab" data-view="games">Games</button>
+<button class="nav-tab" data-view="chat">Chat</button>
+<button class="nav-tab" data-view="ai">AI</button>
+<button class="nav-tab" data-view="settings">Settings</button>
+<button class="nav-tab" data-view="account">Account</button>
+</div>
+<div class="nav-right">
+<span class="version-badge" id="versionBadge">v--</span>
+<span class="online-badge">&#9679; online</span>
+<span class="mod-badge" id="mod-badge"></span>
+<span id="nav-user" style="font-size:10px;color:var(--muted);display:none"></span>
+<button id="nav-admin-btn" style="display:none;padding:3px 8px;border:none;border-radius:6px;background:var(--accent-dim);color:var(--accent);font-size:10px;font-weight:600;cursor:pointer;font-family:var(--font)">Admin</button>
+</div>
+</nav>
 
-  <div id="main-content" style="margin-left:240px;min-height:100vh;padding:24px 32px;animation:fadeIn 0.4s ease-out">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
-      <button id="sidebar-toggle" style="background:var(--glass-bg);border:1px solid var(--glass-border);color:var(--text-secondary);padding:8px;border-radius:10px;cursor:pointer;font-size:1.2rem;display:none">&#x2630;</button>
-      <input id="global-search" type="text" placeholder="Search games..." style="flex:1;min-width:160px;padding:10px 16px;border-radius:12px;border:1px solid var(--glass-border);background:var(--glass-bg);color:var(--text-primary);font-size:0.9rem;outline:none;font-family:'Inter',sans-serif">
-      <button id="random-game-btn" style="background:var(--glass-bg);border:1px solid var(--glass-border);color:var(--text-secondary);padding:10px 14px;border-radius:12px;cursor:pointer;font-size:0.8rem;font-family:'Inter',sans-serif">&#x1F3B2; Random</button>
-      <select id="sort-select" style="padding:10px 14px;border-radius:12px;border:1px solid var(--glass-border);background:var(--glass-bg);color:var(--text-secondary);font-size:0.85rem;outline:none;font-family:'Inter',sans-serif">
-        <option value="default">Default</option>
-        <option value="a-z">A-Z</option>
-        <option value="z-a">Z-A</option>
-      </select>
-      <button id="clear-search" style="background:var(--glass-bg);border:1px solid var(--glass-border);color:var(--text-secondary);padding:10px 16px;border-radius:12px;cursor:pointer;font-size:0.85rem;font-family:'Inter',sans-serif">Clear</button>
-    </div>
-    <div id="alpha-index" style="display:flex;gap:4px;margin-bottom:8px;overflow-x:auto;padding-bottom:2px"></div>
-
-    <div id="category-bar" style="display:flex;gap:8px;margin-bottom:20px;overflow-x:auto;padding-bottom:4px"></div>
-
-    <div id="catalog-container">
-      <div id="catalog-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"></div>
-    </div>
-
-    <div id="section-pages" style="display:none"></div>
-  </div>
+<div id="content">
+<div id="home-view" class="view active">
+<div class="home-header">
+<h1>Cache</h1>
+<p>your games, your proxy, your rules</p>
+</div>
+<div class="quick-apps">
+<a class="app-icon" data-url="https://youtube.com"><img src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%231a1a2e%22 rx=%2220%22/%3E%3Ctext x=%2250%22 y=%2265%22 text-anchor=%22middle%22 font-size=%2240%22 fill=%22%23ff4444%22%3E▶%3C/text%3E%3C/svg%3E" alt="YouTube"><span>YouTube</span></a>
+<a class="app-icon" data-url="https://discord.com"><img src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%231a1a2e%22 rx=%2220%22/%3E%3Ctext x=%2250%22 y=%2265%22 text-anchor=%22middle%22 font-size=%2235%22 fill=%22%235865F2%22%3E♯%3C/text%3E%3C/svg%3E" alt="Discord"><span>Discord</span></a>
+<a class="app-icon" data-url="https://spotify.com"><img src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%231a1a2e%22 rx=%2220%22/%3E%3Ctext x=%2250%22 y=%2265%22 text-anchor=%22middle%22 font-size=%2235%22 fill=%22%231DB954%22%3E♪%3C/text%3E%3C/svg%3E" alt="Spotify"><span>Spotify</span></a>
+<a class="app-icon" data-url="https://reddit.com"><img src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%231a1a2e%22 rx=%2220%22/%3E%3Ctext x=%2250%22 y=%2265%22 text-anchor=%22middle%22 font-size=%2235%22 fill=%22%23FF4500%22%3ER%3C/text%3E%3C/svg%3E" alt="Reddit"><span>Reddit</span></a>
+<a class="app-icon" data-url="https://twitter.com"><img src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%231a1a2e%22 rx=%2220%22/%3E%3Ctext x=%2250%22 y=%2265%22 text-anchor=%22middle%22 font-size=%2235%22 fill=%22white%22%3E𝕏%3C/text%3E%3C/svg%3E" alt="X"><span>X</span></a>
+<a class="app-icon" data-url="https://tiktok.com"><img src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%231a1a2e%22 rx=%2220%22/%3E%3Ctext x=%2250%22 y=%2265%22 text-anchor=%22middle%22 font-size=%2235%22 fill=%22white%22%3E♪%3C/text%3E%3C/svg%3E" alt="TikTok"><span>TikTok</span></a>
+<a class="app-icon" data-url="https://twitch.tv"><img src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%231a1a2e%22 rx=%2220%22/%3E%3Ctext x=%2250%22 y=%2265%22 text-anchor=%22middle%22 font-size=%2235%22 fill=%22%239146FF%22%3E▶%3C/text%3E%3C/svg%3E" alt="Twitch"><span>Twitch</span></a>
+<a class="app-icon" data-url="https://netflix.com"><img src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%231a1a2e%22 rx=%2220%22/%3E%3Ctext x=%2250%22 y=%2265%22 text-anchor=%22middle%22 font-size=%2235%22 fill=%22%23E50914%22%3EN%3C/text%3E%3C/svg%3E" alt="Netflix"><span>Netflix</span></a>
+</div>
+<div class="search-section">
+<form id="sj-form">
+<input id="sj-search-engine" value="https://duckduckgo.com/?q=%s" type="hidden">
+<div class="search-row">
+<input id="sj-address" type="text" placeholder="Search or enter URL..." autofocus>
+<button type="submit">Go</button>
+</div>
+</form>
+</div>
+<div class="home-shortcuts" id="homeShortcuts">
+<div class="shortcuts-header">
+<h3>Shortcuts</h3>
+<button id="addShortcutBtn" class="shortcut-add-btn">+ Add</button>
+</div>
+<div class="shortcuts-grid" id="shortcutsGrid"></div>
+<div id="addShortcutModal" class="modal-overlay hidden">
+<div class="modal">
+<h3>Add Shortcut</h3>
+<label>Name
+<input id="shortcutNameInput" type="text" maxlength="30" placeholder="Shortcut name">
+</label>
+<label>URL
+<input id="shortcutUrlInput" type="text" placeholder="https://example.com">
+</label>
+<div class="modal-actions">
+<button id="cancelShortcut" class="modal-btn ghost">Cancel</button>
+<button id="confirmShortcut" class="modal-btn primary">Add</button>
+</div>
+</div>
+</div>
+</div>
 </div>
 
+<div id="proxy-view" class="view">
+<div id="frame-container"></div>
+</div>
+
+<div id="games-view" class="view">
+<div class="games-top">
+<h2>Games</h2>
+<p>All <span id="game-count">0</span> games loaded</p>
+</div>
+    <div class="games-search"><input type="text" id="games-search-input" placeholder="Search games..."></div>
+    <div id="games-grid" class="games-grid"></div>
+</div>
+
+<div id="chat-view" class="view">
+<div class="chat-layout">
+<aside class="chat-sidebar">
+<h2>Chat Rooms</h2>
+<label>Your name
+<input id="chatName" type="text" maxlength="24" placeholder="Nickname">
+</label>
+<button class="chat-btn make-room" id="createRoomBtn">Create Room</button>
+<label>Join with code
+<input id="roomCode" type="text" maxlength="24" placeholder="Enter invite code">
+</label>
+<button class="chat-btn join-room" id="joinRoomBtn">Join Room</button>
+<button class="chat-btn leave-room" id="leaveRoomBtn">Leave Room</button>
+<div class="room-list" id="roomList"></div>
+</aside>
+<section class="chat-main">
+<div class="chat-title">
+<div>
+<h2 id="activeRoomTitle">No room yet</h2>
+<p id="activeRoomMeta">Create or join a room to start chatting.</p>
+</div>
+<div class="chat-title-actions">
+<button class="chat-action-btn" id="clearRoomBtn">Clear</button>
+</div>
+</div>
+<div class="messages" id="messages"></div>
+<form id="messageForm" class="message-form">
+<input id="messageInput" type="text" placeholder="Message this room" autocomplete="off">
+<button type="submit">Send</button>
+</form>
+</section>
+</div>
+</div>
+
+<div id="ai-view" class="view">
+<div class="ai-layout">
+<div class="ai-header">
+<h2>Cache AI</h2>
+<p>Powered by AI</p>
+</div>
+<div class="ai-conversation" id="aiConversation">
+<div class="ai-msg ai-welcome">
+<div class="ai-msg-content">Hello! I'm Cache AI. Ask me anything.</div>
+</div>
+</div>
+<form id="aiForm" class="ai-form">
+<input id="aiInput" type="text" placeholder="Ask Cache AI anything..." autocomplete="off">
+<button type="submit">Send</button>
+</form>
+</div>
+</div>
+
+<div id="settings-view" class="view">
+<div class="settings-top">
+<h2>Settings</h2>
+</div>
+<div class="settings-body">
+<div class="setting-card">
+<h3>Theme</h3>
+<select id="theme-select">
+<option value="nexus">Cache (Teal)</option>
+<option value="midnight">Midnight (Purple)</option>
+<option value="inferno">Inferno (Red)</option>
+<option value="forest">Forest (Green)</option>
+<option value="ocean">Ocean (Blue)</option>
+<option value="mono">Monochrome</option>
+</select>
+</div>
+<div class="setting-card">
+<h3>Tab Cloak</h3>
+<div class="cloak-options">
+<button class="cloak-btn" data-cloak="">None</button>
+<button class="cloak-btn" data-cloak="google">Google</button>
+<button class="cloak-btn" data-cloak="classroom">Classroom</button>
+<button class="cloak-btn" data-cloak="drive">Drive</button>
+</div>
+</div>
+<div class="setting-card">
+<h3>Auto-Cloak</h3>
+<p class="setting-desc">Automatically apply the selected cloak on page load</p>
+<label class="toggle-row">
+<input type="checkbox" id="autocloak-toggle">
+<span class="toggle-track"><span class="toggle-knob"></span></span>
+<span id="autocloak-label">Off</span>
+</label>
+</div>
+<div class="setting-card">
+<h3>Proxy Engine</h3>
+<p class="setting-desc">Switch proxy backend. "Server" works without service workers.</p>
+<select id="proxy-select">
+<option value="server">Server Proxy (no SW needed)</option>
+<option value="direct">Direct (no proxy)</option>
+</select>
+</div>
+<div class="setting-card">
+<h3>Search Engine</h3>
+<select id="engine-select">
+<option value="https://duckduckgo.com/?q=%s" selected>DuckDuckGo</option>
+<option value="https://www.google.com/search?q=%s">Google</option>
+<option value="https://www.bing.com/search?q=%s">Bing</option>
+</select>
+</div>
+<div class="setting-card">
+<h3>Performance</h3>
+<div class="toggle-row">
+<span style="font-size:12px;color:var(--muted)">Animations</span>
+<button id="toggle-anim" class="toggle-track" style="background:var(--accent-dim);cursor:pointer;border:none;position:relative"><span class="toggle-knob" style="left:18px;background:var(--accent)"></span></button>
+</div>
+<div class="toggle-row" style="margin-top:8px">
+<span style="font-size:12px;color:var(--muted)">FPS Counter</span>
+<button id="fps-toggle" class="toggle-track" style="cursor:pointer;border:none;position:relative"><span class="toggle-knob"></span></button>
+</div>
+<div class="toggle-row" style="margin-top:8px">
+<span style="font-size:12px;color:var(--muted)">Memory Cleanup</span>
+<button id="mem-cleanup-btn" style="padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--muted);font-size:10px;cursor:pointer;font-family:var(--font)">Clean</button>
+</div>
+</div>
+<div class="setting-card">
+<h3>Chat Nickname</h3>
+<p class="setting-desc">Display name shown in chat rooms</p>
+<input type="text" id="settingsNickname" maxlength="24" placeholder="Nickname">
+</div>
+<div class="setting-card">
+<h3>Chat Rooms</h3>
+<p class="setting-desc">Delete all saved rooms and messages</p>
+<button id="clearAllRoomsBtn" class="danger-btn">Delete all rooms and messages</button>
+</div>
+<div class="setting-card">
+<h3>About Cache</h3>
+<p class="setting-desc">Version <span id="aboutVersion">--</span></p>
+<p class="setting-desc">Build <span id="aboutBuild">--</span></p>
+</div>
+</div>
+</div>
+
+<div id="account-view" class="view">
+<div class="settings-top">
+<h2>Account</h2>
+</div>
+<div class="settings-body">
+<div class="setting-card" id="account-status-card">
+<h3>Sign In</h3>
+<p class="setting-desc" id="account-status-desc">Sign in to sync your data across devices</p>
+<div id="account-signed-out">
+<label>Email
+<input id="account-email" type="email" placeholder="your@email.com">
+</label>
+<label>Password
+<input id="account-password" type="password" placeholder="Password">
+</label>
+<div class="modal-actions" style="margin-top:10px">
+<button id="account-signin-btn" class="modal-btn primary">Sign In</button>
+<button id="account-signup-btn" class="modal-btn ghost">Create Account</button>
+</div>
+<p id="account-error" style="color:var(--pink);font-size:12px;margin-top:6px;display:none"></p>
+</div>
+<div id="account-signed-in" style="display:none">
+<p style="margin-bottom:8px">Signed in as <strong id="account-email-display"></strong></p>
+<button id="account-signout-btn" class="modal-btn ghost">Sign Out</button>
+</div>
+</div>
+<div class="setting-card" id="account-sync-card">
+<h3>Cloud Sync</h3>
+<p class="setting-desc">Data synced when signed in: messages, settings, shortcuts, music queue, AI chats</p>
+<button id="account-sync-btn" class="modal-btn primary" disabled>Sync Now</button>
+<p id="account-sync-status" style="font-size:11px;color:var(--muted);margin-top:4px"></p>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Frog toggle (proxy view only) -->
+<button id="frog-toggle" title="Toggle toolbar">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M4 2h14l4 4v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/>
+<path d="M18 2v4h4"/>
+<polyline points="12 15 8 11 9.5 9.5 12 12 14.5 9.5 16 11 12 15"/>
+</svg>
+</button>
+
+<!-- Global Frog Bar -->
+<div id="frog-bar">
+<div id="frog-bar-inner">
+<div id="frog-controls">
+<div id="frog-drag-handle" class="frog-drag-handle" title="Drag to reposition">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg>
+</div>
+<div class="frog-nav-group">
+<button id="frog-back" class="frog-btn" title="Back">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+</button>
+<button id="frog-forward" class="frog-btn" title="Forward">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+</button>
+<button id="frog-refresh" class="frog-btn" title="Refresh">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+</button>
+</div>
+<form id="frog-form" class="frog-url-form">
+<div class="frog-url-wrap">
+<svg class="frog-url-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+<input id="frog-url" type="text" placeholder="Search or enter URL..." autofocus>
+</div>
+<button type="submit" class="frog-go-btn">Go</button>
+</form>
+<div class="frog-actions-group">
+<button id="frog-home" class="frog-btn" title="Home">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+</button>
+<button id="frog-popout" class="frog-btn" title="Open in new tab (fullscreen)">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+</button>
+<button id="frog-music-btn" class="frog-btn" title="Toggle music player">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+</button>
+</div>
+</div>
+<div id="frog-tabs">
+<div id="frog-tab-list"></div>
+<button id="frog-newtab" class="frog-newtab-btn" title="New Tab">
+<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+</button>
+</div>
+</div>
+</div>
+
+<!-- Music Player -->
+<div id="music-player" class="music-minimized">
+<div id="music-header">
+<div id="music-now-playing" class="music-compact">
+<img id="music-thumb" src="" alt="">
+<div class="music-info">
+<span id="music-title">No track</span>
+<span id="music-author"></span>
+</div>
+</div>
+<div class="music-header-btns">
+<button id="music-search-toggle" class="music-icon-btn" title="Search">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+</button>
+<button id="music-toggle-btn" class="music-icon-btn" title="Minimize">
+<svg id="music-toggle-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+</button>
+</div>
+</div>
+<div id="music-body">
+<div id="music-search-area" class="music-hidden">
+<div class="music-search-wrap">
+<input id="music-search-input" type="text" placeholder="Search songs...">
+</div>
+<div id="music-results"></div>
+</div>
+<div id="music-player-area">
+<div id="music-youtube-player"></div>
+<div id="music-controls">
+<div id="music-controls-row">
+<button id="music-prev" title="Previous">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+</button>
+<button id="music-play-pause" title="Play/Pause">
+<svg id="play-icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+</button>
+<button id="music-next" title="Next">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zm-5.5 6l-8.5 6V6z"/></svg>
+</button>
+</div>
+<div id="music-progress">
+<span id="music-time-current">0:00</span>
+<input type="range" id="music-seek" min="0" max="100" value="0">
+<span id="music-time-total">0:00</span>
+</div>
+<div id="music-controls-row2">
+<button id="music-shuffle" title="Shuffle">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+</button>
+<button id="music-repeat" title="Repeat">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+</button>
+<button id="music-volume-btn" title="Volume"></button>
+<input type="range" id="music-volume-slider" min="0" max="100" value="100">
+<button id="music-queue-toggle" title="Queue">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+</button>
+</div>
+</div>
+<div id="music-queue">
+<div class="music-queue-header">
+<span>Queue</span>
+<span id="music-queue-count">0 songs</span>
+</div>
+<div id="music-queue-list"></div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Gateway Overlay -->
+<div id="gateway-overlay">
+<div class="gateway-box">
+<div class="logo">Cache</div>
+<div class="sub" id="gateway-sub-text">Enter your handle to begin</div>
+<div id="gateway-return-info" style="font-size:11px;color:var(--accent);min-height:16px;margin-bottom:4px"></div>
+<input id="username-input" class="auth-input" placeholder="Your handle" maxlength="20" autocomplete="off">
+<div class="auth-error" id="gateway-error"></div>
+<button id="gateway-submit" class="gateway-btn">Enter Cache</button>
+<div class="gateway-pass-form">
+<input type="password" id="gateway-passkey" class="pass-input" placeholder="Admin passkey (optional)" maxlength="32" autocomplete="off">
+<div class="pass-error" id="gateway-pass-error"></div>
+<button id="gateway-pass-submit" class="pass-submit-btn">Admin Login</button>
+</div>
+<div class="gateway-meta">v4.0 &mdash; All games loaded: <span id="gateway-game-count">0</span></div>
+</div>
+</div>
+
+<!-- Admin Overlay -->
 <div id="admin-overlay">
-  <div class="modal glass-strong" style="text-align:center">
-    <div style="font-size:2.5rem;margin-bottom:12px">&#x1F512;</div>
-    <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:4px">Admin Authentication</h2>
-    <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:20px">Enter the master passkey</p>
-    <input type="password" id="auth-passkey" class="auth-input" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;" maxlength="32" autocomplete="off">
-    <div id="auth-error" class="auth-error"></div>
-    <button id="auth-submit" style="width:100%;margin-top:16px;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent-purple),#5b21b6);color:#fff;font-size:0.95rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif">Authenticate</button>
-    <button id="auth-cancel" style="width:100%;margin-top:8px;padding:12px;border-radius:12px;border:1px solid var(--glass-border);background:transparent;color:var(--text-secondary);font-size:0.85rem;cursor:pointer;font-family:'Inter',sans-serif">Cancel</button>
-  </div>
+<div class="modal" style="text-align:center">
+<h3>Admin Authentication</h3>
+<p style="color:var(--muted);font-size:13px;margin-bottom:16px">Enter the master passkey</p>
+<input type="password" id="auth-passkey" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;" maxlength="32" style="width:100%;padding:12px 16px;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.04);color:var(--text);font-size:14px;outline:none;text-align:center;margin-bottom:8px">
+<div id="auth-error" style="color:var(--pink);font-size:12px;min-height:20px"></div>
+<div class="modal-actions" style="justify-content:center;gap:8px">
+<button id="auth-submit" class="modal-btn primary">Authenticate</button>
+<button id="auth-cancel" class="modal-btn ghost">Cancel</button>
+</div>
+</div>
 </div>
 
+<!-- Admin Panel -->
 <div id="admin-panel">
-  <div class="admin-header">
-    <span style="font-size:1.2rem">&#x1F4BB;</span>
-    <h2>Admin Console</h2>
-    <button id="admin-close">&#x2715; Close</button>
-  </div>
-  <div class="admin-tabs">
-    <button class="admin-tab active" data-atab="profiles">&#x1F465; Profiles</button>
-    <button class="admin-tab" data-atab="canvas">&#x270F; Canvas</button>
-    <button class="admin-tab" data-atab="analytics">&#x1F4CA; Analytics</button>
-    <button class="admin-tab" data-atab="appearance">&#x1F3A8; Theme</button>
-    <button class="admin-tab" data-atab="uploader">&#x2B06; Uploader</button>
-    <button class="admin-tab" data-atab="games">&#x1F3AE; Games</button>
-    <button class="admin-tab" data-atab="broadcast">&#x1F4E2; Broadcast</button>
-  </div>
-  <div class="admin-content" id="admin-content">
-    <div class="admin-tab-content active" data-atab-content="profiles">
-      <h3 style="font-size:1rem;font-weight:600;margin-bottom:12px">Active Sessions</h3>
-      <table class="admin-table"><thead><tr><th>Handle</th><th>Login Time</th><th>Games Played</th></tr></thead><tbody id="sessions-body"></tbody></table>
-    </div>
-    <div class="admin-tab-content" data-atab-content="canvas">
-      <h3 style="font-size:1rem;font-weight:600;margin-bottom:12px">Canvas Editor</h3>
-      <textarea id="admin-canvas-editor" style="width:100%;padding:14px;border-radius:12px;border:1px solid var(--glass-border);background:rgba(0,0,0,0.3);color:var(--text-primary);font-size:0.9rem;outline:none;min-height:80px;font-family:'Inter',sans-serif;resize:vertical"></textarea>
-      <button id="canvas-update-btn" style="margin-top:8px;padding:10px 20px;border-radius:10px;border:none;background:var(--accent-primary);color:#fff;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif">Update</button>
-    </div>
-    <div class="admin-tab-content" data-atab-content="analytics">
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px">
-        <div class="stat-card"><div class="stat-value" id="stat-sessions">0</div><div class="stat-label">Sessions</div></div>
-        <div class="stat-card"><div class="stat-value" id="stat-launched">0</div><div class="stat-label">Launched</div></div>
-        <div class="stat-card"><div class="stat-value" id="stat-favs">0</div><div class="stat-label">Favorites</div></div>
-      </div>
-      <div id="analytics-content"></div>
-    </div>
-    <div class="admin-tab-content" data-atab-content="appearance">
-      <h3 style="font-size:1rem;font-weight:600;margin-bottom:12px">Accent Color</h3>
-      <div class="color-picker-grid" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px" id="color-picker"></div>
-      <h3 style="font-size:1rem;font-weight:600;margin-bottom:12px">Options</h3>
-      <div id="appearance-options"></div>
-      <button id="reset-colors-btn" style="margin-top:12px;padding:10px 20px;border-radius:10px;border:1px solid var(--glass-border);background:transparent;color:var(--text-secondary);font-size:0.85rem;cursor:pointer;font-family:'Inter',sans-serif">Reset to Defaults</button>
-    </div>
-    <div class="admin-tab-content" data-atab-content="uploader">
-      <h3 style="font-size:1rem;font-weight:600;margin-bottom:12px">Upload Game</h3>
-      <div id="drop-zone">
-        <div style="font-size:2.5rem;opacity:0.5">&#x2B06;</div>
-        <div>Drop an HTML file or click to browse</div>
-      </div>
-      <input type="file" id="file-input" accept=".html" style="display:none">
-      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-        <input type="text" id="upload-title" placeholder="Game title" style="flex:1;min-width:120px;padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);background:rgba(0,0,0,0.3);color:var(--text-primary);font-size:0.85rem;outline:none;font-family:'Inter',sans-serif">
-        <input type="text" id="upload-category" placeholder="Category" style="width:120px;padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);background:rgba(0,0,0,0.3);color:var(--text-primary);font-size:0.85rem;outline:none;font-family:'Inter',sans-serif">
-        <button id="upload-submit" style="padding:10px 20px;border-radius:10px;border:none;background:var(--accent-primary);color:#fff;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif">Upload</button>
-      </div>
-      <div id="upload-status" style="margin-top:8px;font-size:0.8rem;color:var(--text-muted)"></div>
-    </div>
-    <div class="admin-tab-content" data-atab-content="games">
-      <h3 style="font-size:1rem;font-weight:600;margin-bottom:12px">Manage Games</h3>
-      <table class="admin-table"><thead><tr><th>Title</th><th>Filename</th><th>Action</th></tr></thead><tbody id="games-manage-body"></tbody></table>
-    </div>
-    <div class="admin-tab-content" data-atab-content="broadcast">
-      <h3 style="font-size:1rem;font-weight:600;margin-bottom:12px">Live Broadcast</h3>
-      <input type="text" id="broadcast-text" class="auth-input" placeholder="Message content">
-      <button id="broadcast-submit" style="margin-top:8px;padding:10px 20px;border-radius:10px;border:none;background:var(--accent-red);color:#fff;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif">Broadcast</button>
-    </div>
-  </div>
-  </div>
+<div class="admin-header"><h2>Admin Console</h2><button id="admin-close">&times; Close</button></div>
+<div class="admin-tabs">
+<button class="admin-tab active" data-atab="profiles">Sessions</button>
+<button class="admin-tab" data-atab="users">Users</button>
+<button class="admin-tab" data-atab="canvas">Canvas</button>
+<button class="admin-tab" data-atab="analytics">Analytics</button>
+<button class="admin-tab" data-atab="appearance">Appearance</button>
+<button class="admin-tab admin-only" data-atab="uploader">Uploader</button>
+<button class="admin-tab admin-only" data-atab="games">Games</button>
+<button class="admin-tab" data-atab="broadcast">Broadcast</button>
+<button class="admin-tab admin-only" data-atab="jarvis">Jarvis</button>
+</div>
+<div class="admin-content">
+<div class="admin-tab-content active" data-atab-content="profiles">
+<table class="admin-table"><thead><tr><th>Handle</th><th>Login Time</th><th>Games Played</th><th>Role</th></tr></thead><tbody id="sessions-body"></tbody></table>
+</div>
+<div class="admin-tab-content" data-atab-content="users">
+<p style="font-size:12px;color:var(--muted);margin-bottom:12px">Assign roles to users. Only admins can manage roles.</p>
+<div style="display:flex;gap:8px;margin-bottom:12px">
+<input type="text" id="user-manage-input" placeholder="Username" style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:rgba(255,255,255,.04);color:var(--text);font-size:13px;outline:none">
+<select id="user-manage-role" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:rgba(255,255,255,.04);color:var(--text);font-size:12px;outline:none"><option value="mod">Moderator</option><option value="admin">Admin</option></select>
+<button id="user-manage-add" class="modal-btn primary">Set Role</button>
+</div>
+<table class="admin-table"><thead><tr><th>User</th><th>Role</th><th>Action</th></tr></thead><tbody id="users-manage-body"></tbody></table>
+</div>
+<div class="admin-tab-content" data-atab-content="canvas">
+<textarea id="admin-canvas-editor" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:8px;background:rgba(255,255,255,.04);color:var(--text);font-size:13px;outline:none;min-height:60px;resize:vertical"></textarea>
+<button id="canvas-update-btn" class="modal-btn primary" style="margin-top:8px">Update</button>
+</div>
+<div class="admin-tab-content" data-atab-content="analytics">
+<div class="stat-grid">
+<div class="stat-card"><div class="stat-value" id="stat-sessions">0</div><div class="stat-label">Sessions</div></div>
+<div class="stat-card"><div class="stat-value" id="stat-launched">0</div><div class="stat-label">Launched</div></div>
+<div class="stat-card"><div class="stat-value" id="stat-favs">0</div><div class="stat-label">Favorites</div></div>
+</div>
+</div>
+<div class="admin-tab-content" data-atab-content="appearance">
+<h3 style="font-size:14px;font-weight:600;margin-bottom:12px">Accent Color</h3>
+<div class="color-picker-grid" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px" id="color-picker"></div>
+<div id="appearance-options"></div>
+</div>
+<div class="admin-tab-content" data-atab-content="uploader">
+<div id="drop-zone" style="min-height:140px;border:2px dashed var(--border);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;cursor:pointer;color:var(--muted);font-size:13px;transition:all .2s"><div style="font-size:32px;opacity:.5">&#x2B06;</div><div>Drop an HTML file or click to browse</div></div>
+<input type="file" id="file-input" accept=".html" style="display:none">
+<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+<input type="text" id="upload-title" placeholder="Game title" style="flex:1;min-width:120px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:rgba(255,255,255,.04);color:var(--text);font-size:13px;outline:none">
+<input type="text" id="upload-category" placeholder="Category" style="width:120px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:rgba(255,255,255,.04);color:var(--text);font-size:13px;outline:none">
+<button id="upload-submit" class="modal-btn primary">Upload</button>
+</div>
+<div id="upload-status" style="margin-top:8px;font-size:11px;color:var(--muted)"></div>
+</div>
+<div class="admin-tab-content" data-atab-content="games">
+<table class="admin-table"><thead><tr><th>Title</th><th>Filename</th><th>Action</th></tr></thead><tbody id="games-manage-body"></tbody></table>
+</div>
+<div class="admin-tab-content" data-atab-content="broadcast">
+<input type="text" id="broadcast-text" placeholder="Message content" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:rgba(255,255,255,.04);color:var(--text);font-size:13px;outline:none;margin-bottom:8px">
+<button id="broadcast-submit" class="modal-btn primary">Broadcast</button>
+</div>
+<div class="admin-tab-content" data-atab-content="jarvis">
+<div id="jarvis-container" style="display:flex;flex-direction:column;gap:10px;min-height:300px">
+<div style="display:flex;gap:8px;align-items:center">
+<select id="jarvis-model" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:rgba(255,255,255,.04);color:var(--text);font-size:12px;outline:none">
+<option value="auto">Auto (Fastest)</option>
+</select>
+<button id="jarvis-clear" class="modal-btn" style="padding:6px 14px;font-size:12px">Clear</button>
+<button id="jarvis-stop" class="modal-btn" style="padding:6px 14px;font-size:12px;display:none">Stop</button>
+<button id="jarvis-key-toggle" class="modal-btn" style="padding:6px 14px;font-size:12px">API Key</button>
+<span style="flex:1"></span>
+<button id="jarvis-undo" class="modal-btn" style="padding:6px 10px;font-size:12px;opacity:.3" title="Undo last change">&#x21A9;</button>
+<button id="jarvis-redo" class="modal-btn" style="padding:6px 10px;font-size:12px;opacity:.3" title="Redo last undone change">&#x21AA;</button>
+<button id="jarvis-deploy" class="modal-btn" style="padding:6px 14px;font-size:12px;background:rgba(16,185,129,.2);border-color:rgba(16,185,129,.4)">Deploy</button>
+</div>
+<div id="jarvis-key-section" style="display:none;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:rgba(0,0,0,.15);font-size:12px">
+<div style="margin-bottom:6px;color:var(--muted)">OpenRouter API key (optional — free models work without one). Get at <a href="https://openrouter.ai/keys" target="_blank" style="color:var(--accent)">openrouter.ai/keys</a></div>
+<div style="display:flex;gap:6px">
+<input type="password" id="jarvis-api-key" placeholder="sk-..." style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:rgba(255,255,255,.04);color:var(--text);font-size:12px;outline:none">
+<button id="jarvis-api-save" class="modal-btn primary" style="padding:6px 12px;font-size:11px">Save</button>
+</div>
+</div>
+<div id="jarvis-conversation" style="flex:1;overflow-y:auto;min-height:200px;max-height:360px;padding:10px;border:1px solid var(--border);border-radius:10px;background:rgba(0,0,0,.2);font-size:13px;line-height:1.5;display:flex;flex-direction:column;gap:8px"></div>
+<div style="display:flex;gap:8px">
+<textarea id="jarvis-input" placeholder='Ask Jarvis to do something... e.g. "add 10 new games" or "debug the website"' style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.04);color:var(--text);font-size:13px;outline:none;resize:none;min-height:44px;max-height:80px;font-family:var(--font)"></textarea>
+<button id="jarvis-submit" class="modal-btn primary" style="padding:10px 20px;align-self:flex-end">Send</button>
+</div>
+</div>
+</div>
+</div>
 </div>
 
+<!-- Theater View -->
 <div id="theater-view">
-  <div class="theater-toolbar">
-    <button id="theater-back">&#x2190; Back</button>
-    <span class="title" id="theater-title">Loading...</span>
-    <button id="theater-fullscreen">&#x26F6; Fullscreen</button>
-    <button id="theater-download">&#x2B07; Export</button>
-  </div>
-  <iframe id="theater-frame" class="theater-frame" allowfullscreen allow="autoplay;fullscreen;gamepad"></iframe>
-  <div class="theater-dock">
-    <button id="dock-back" title="Back">&#x2190;</button>
-    <button id="dock-reload" title="Reload">&#x21BB;</button>
-    <button id="dock-fullscreen" title="Fullscreen">&#x26F6;</button>
-    <button id="dock-download" title="Export">&#x2B07;</button>
-    <button id="dock-open" title="New Tab">&#x2197;</button>
-    <button id="dock-cloak" title="Open in blank pop-up" style="background:none;border:none;color:var(--text-secondary);cursor:pointer;padding:8px;border-radius:50%;transition:all 0.2s;font-size:16px">&#x1F6E1;</button>
-  </div>
+<div class="theater-toolbar">
+<button id="theater-back">&#x2190; Back</button>
+<span class="title" id="theater-title">Loading...</span>
+<button id="theater-fullscreen">Fullscreen</button>
+<button id="theater-download">Export</button>
+</div>
+<iframe id="theater-frame" class="theater-frame" allowfullscreen allow="autoplay;fullscreen;gamepad"></iframe>
+<div class="theater-dock">
+<button id="dock-back" title="Back">&#x2190;</button>
+<button id="dock-reload" title="Reload">&#x21BB;</button>
+<button id="dock-fullscreen" title="Fullscreen">&#x26F6;</button>
+<button id="dock-download" title="Export">&#x2B07;</button>
+<button id="dock-open" title="New Tab">&#x2197;</button>
+<button id="dock-cloak" title="Open in blank pop-up" style="font-size:18px">&#x1F6E1;</button>
+</div>
 </div>
 
-<div id="toast-container"></div>
+<div id="fps-counter">FPS: <span id="fps-value">0</span></div>
+<div id="toast"></div>
 
-<script>
-(function(){
-var $ = function(s,c){return (c||document).querySelector(s);};
-var $$ = function(s,c){return Array.from((c||document).querySelectorAll(s));};
-
-/* ===== Broadcast ===== */
-function pollBroadcast() {
-    fetch('/broadcast.json?v=' + Date.now()).then(function(r){return r.json()}).then(function(data){
-        var b = document.getElementById('broadcast-banner');
-        if (data && data.text && (Date.now() - data.timestamp < 5000)) {
-            b.textContent = data.admin + ': ' + data.text;
-            b.style.display = 'block';
-            setTimeout(function(){ b.style.display = 'none'; }, 5000);
-        } else {
-            b.style.display = 'none';
-        }
-    }).catch(function(){});
-}
-setInterval(pollBroadcast, 3000);
-
-/* ===== Store ===== */
-const Store = {
-  get: function(k,d){try{var v=localStorage.getItem('cache_'+k);return v?JSON.parse(v):d}catch(e){return d}},
-  set: function(k,v){try{localStorage.setItem('cache_'+k,JSON.stringify(v))}catch(e){}}
-};
-
-/* ===== AppState ===== */
-var AppState = {
-  user: Store.get('user', null),
-  favorites: Store.get('favorites', []),
-  sessions: Store.get('sessions', []),
-  canvas: Store.get('canvas', 'Welcome to Cache'),
-  analytics: Store.get('analytics', { launched: 0, sessions: 0 }),
-  adminAuthed: Store.get('adminAuthed', false),
-  sideloaded: Store.get('sideloaded', []),
-  settings: Store.get('settings', { accent: '#2563eb', stealth: false, cardSize: 'medium', animations: true, backslashPanic: true, compactGrid: false, lowData: false, showFps: false, font: "'Inter',sans-serif", wallpaper: '', cursor: 'default' }),
-  saveUser: function(){Store.set('user',this.user)},
-  saveFavorites: function(){Store.set('favorites',this.favorites)},
-  saveSessions: function(){Store.set('sessions',this.sessions)},
-  saveCanvas: function(){Store.set('canvas',this.canvas)},
-  saveAnalytics: function(){Store.set('analytics',this.analytics)},
-  saveSideloaded: function(){Store.set('sideloaded',this.sideloaded)},
-  saveSettings: function(){Store.set('settings',this.settings)},
-  saveAdminAuthed: function(){Store.set('adminAuthed',this.adminAuthed)},
-  _save: function(){this.saveUser();this.saveFavorites();this.saveSessions();this.saveCanvas();this.saveAnalytics();this.saveSideloaded();this.saveSettings();this.saveAdminAuthed();},
-  _applySettings: function(){
-    var s = this.settings;
-    document.documentElement.style.setProperty('--accent-primary', s.accent || '#2563eb');
-    document.documentElement.style.setProperty('--font-family', s.font || "'Inter',sans-serif");
-    var body = document.body;
-    if (body) body.style.fontFamily = s.font || "'Inter',sans-serif";
-    if (s.stealth) {
-      document.title = 'My Drive - Google Drive';
-      var link = document.querySelector('link[rel~="icon"]');
-      if (link) link.href = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"%3E%3Crect width="64" height="64" rx="8" fill="%23fbbc04"/%3E%3Ctext x="32" y="44" font-size="36" font-weight="bold" fill="white" text-anchor="middle" font-family="sans-serif"%3EG%3C/text%3E%3C/svg%3E';
-    } else {
-      document.title = 'Cache';
-      var link = document.querySelector('link[rel~="icon"]');
-      if (link) link.href = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"%3E%3Crect width="64" height="64" rx="8" fill="%232563eb"/%3E%3Ctext x="32" y="44" font-size="40" font-weight="bold" fill="white" text-anchor="middle" font-family="sans-serif"%3EC%3C/text%3E%3C/svg%3E';
-    }
-    if (s.compactGrid) document.documentElement.classList.add('compact');
-    else document.documentElement.classList.remove('compact');
-    if (s.lowData) document.documentElement.classList.add('lowdata');
-    else document.documentElement.classList.remove('lowdata');
-    if (s.wallpaper && body) body.style.backgroundImage = 'url(' + s.wallpaper + ')';
-    else if (body) body.style.backgroundImage = '';
-    if (s.cursor && body) body.style.cursor = s.cursor;
-  },
-  _syncSessions: function(){
-    if (!this.user || this.user === 'Guest') return;
-    var existing = this.sessions.find(function(s){return s.handle === this.user;}.bind(this));
-    if (!existing) { this.sessions.push({handle:this.user,loginTime:Date.now(),gamesPlayed:0}); this.saveSessions(); }
-  },
-  _syncWidgets: function(){
-    var nameEl = document.getElementById('profile-name');
-    var badgeEl = document.getElementById('tier-badge');
-    if (nameEl) nameEl.textContent = this.user || 'Guest';
-    if (badgeEl) badgeEl.textContent = this.favorites.length + ' favs';
-  }
-};
-window.AppState = AppState;
-
-/* ===== Toast ===== */
-function toast(msg,type){
-  var c = document.getElementById('toast-container');
-  if (!c) return;
-  var el = document.createElement('div');
-  el.className = 'toast ' + (type||'info');
-  el.innerHTML = msg;
-  c.appendChild(el);
-  setTimeout(function(){el.style.opacity='0';el.style.transition='opacity 0.3s';setTimeout(function(){el.remove()},300);},3000);
-}
-
-/* ===== Games Database ===== */
-var GAMES = [
-  {id:'g1',title:'Subway Surfers',cat:'Arcade',desc:'Endless runner',url:'https://cdn.jsdelivr.net/gh/Nailington/3kh0-assets@aeb371b7e88542fd5e61eeed9e967a446d84fe1b/subway-surfers/index.html',thumb:'&#x1F5E3;',embed:true},
-  {id:'g2',title:'Cookie Clicker',cat:'Strategy',desc:'Bake cookies',url:'https://cdn.jsdelivr.net/gh/Nailington/3kh0-assets@aeb371b7e88542fd5e61eeed9e967a446d84fe1b/cookie-clicker/index.html',thumb:'&#x1F36A;',embed:true},
-  {id:'g3',title:'2048',cat:'Puzzle',desc:'Merge tiles',url:'https://cdn.jsdelivr.net/gh/Nailington/3kh0-assets@aeb371b7e88542fd5e61eeed9e967a446d84fe1b/2048/index.html',thumb:'2',embed:true},
-  {id:'g4',title:'Slope',cat:'Arcade',desc:'Roll down',url:'https://cdn.jsdelivr.net/gh/Nailington/3kh0-assets@aeb371b7e88542fd5e61eeed9e967a446d84fe1b/slope/index.html',thumb:'&#x26F5;',embed:true},
-  {id:'g5',title:'Doodle Jump',cat:'Arcade',desc:'Jump up',url:'https://cdn.jsdelivr.net/gh/Nailington/3kh0-assets@aeb371b7e88542fd5e61eeed9e967a446d84fe1b/doodle-jump/index.html',thumb:'&#x1F4AD;',embed:true},
-  {id:'g6',title:'Tetris',cat:'Puzzle',desc:'Classic blocks',url:'https://cdn.jsdelivr.net/gh/Nailington/3kh0-assets@aeb371b7e88542fd5e61eeed9e967a446d84fe1b/flashtetris/index.html',thumb:'&#x25A6;',embed:true},
-  {id:'g7',title:'Run 3',cat:'Arcade',desc:'Run in space',url:'https://cdn.jsdelivr.net/gh/Nailington/3kh0-assets@aeb371b7e88542fd5e61eeed9e967a446d84fe1b/tunnel-rush/index.html',thumb:'&#x1F3C3;',embed:true},
-  {id:'g8',title:'Geometry Dash',cat:'Arcade',desc:'Jump and fly',url:'https://cdn.jsdelivr.net/gh/Nailington/3kh0-assets@aeb371b7e88542fd5e61eeed9e967a446d84fe1b/geodash/index.html',thumb:'&#x25C6;',embed:true},
-  {id:'g9',title:'Moto X3M',cat:'Racing',desc:'Stunt bike',url:'https://cdn.jsdelivr.net/gh/Nailington/3kh0-assets@aeb371b7e88542fd5e61eeed9e967a446d84fe1b/motox3m/index.html',thumb:'&#x1F3CD;',embed:true},
-  {id:'g10',title:'Retro Bowl',cat:'Sports',desc:'Football',url:'https://cdn.jsdelivr.net/gh/Nailington/3kh0-assets@aeb371b7e88542fd5e61eeed9e967a446d84fe1b/retro-bowl/index.html',thumb:'&#x1F3C8;',embed:true},
-  {id:'g11',title:'Temple Run 2',cat:'Arcade',desc:'Run from monsters',url:'https://cdn.jsdelivr.net/gh/Nailington/3kh0-assets@aeb371b7e88542fd5e61eeed9e967a446d84fe1b/temple-run-2/index.html',thumb:'&#x1F3F0;',embed:true},
-  {id:'g12',title:'BitLife',cat:'Simulation',desc:'Live a life',url:'https://cdn.jsdelivr.net/gh/Nailington/3kh0-assets@aeb371b7e88542fd5e61eeed9e967a446d84fe1b/bitlife/index.html',thumb:'&#x1F476;',embed:true},
-  {id:'g13',title:'Crossy Road',cat:'Arcade',desc:'Cross the road',url:'https://cdn.jsdelivr.net/gh/Nailington/3kh0-assets@aeb371b7e88542fd5e61eeed9e967a446d84fe1b/crossyroad/index.html',thumb:'&#x1F98B;',embed:true},
-  {id:'g14',title:'Flappy Bird',cat:'Arcade',desc:'Flap through pipes',url:'https://cdn.jsdelivr.net/gh/Nailington/3kh0-assets@aeb371b7e88542fd5e61eeed9e967a446d84fe1b/flappy-bird/index.html',thumb:'&#x1F426;',embed:true},
-  {id:'g15',title:'Drift Boss',cat:'Racing',desc:'Drift master',url:'https://cdn.jsdelivr.net/gh/Nailington/3kh0-assets@aeb371b7e88542fd5e61eeed9e967a446d84fe1b/drift-boss/index.html',thumb:'&#x1F697;',embed:true},
-  {id:'g16',title:'Chess',cat:'Strategy',desc:'Classic chess',url:'https://cdn.jsdelivr.net/gh/Nailington/3kh0-assets@aeb371b7e88542fd5e61eeed9e967a446d84fe1b/chess/index.html',thumb:'&#x265E;',embed:true},
-  {id:'g17',title:'Townscaper',cat:'Sandbox',desc:'Build towns',url:'https://cdn.jsdelivr.net/gh/Nailington/3kh0-assets@aeb371b7e88542fd5e61eeed9e967a446d84fe1b/townscaper/index.html',thumb:'&#x1F3D8;',embed:true},
-  {id:'g18',title:'Paper.io 2',cat:'IO',desc:'Claim territory',url:'https://cdn.jsdelivr.net/gh/Nailington/3kh0-assets@aeb371b7e88542fd5e61eeed9e967a446d84fe1b/paperio2/index.html',thumb:'&#x1F4DD;',embed:true},
-  {id:'g19',title:'Superhot',cat:'Action',desc:'Time moves when you move',url:'https://cdn.jsdelivr.net/gh/Nailington/3kh0-assets@aeb371b7e88542fd5e61eeed9e967a446d84fe1b/superhot/index.html',thumb:'&#x1F525;',embed:true},
-  {id:'g20',title:'Wordle',cat:'Puzzle',desc:'Guess the word',url:'https://cdn.jsdelivr.net/gh/Nailington/3kh0-assets@aeb371b7e88542fd5e61eeed9e967a446d84fe1b/wordle/index.html',thumb:'W',embed:true},
-  {id:'g21',title:'Fruit Ninja',cat:'Arcade',desc:'Slice fruit',url:'https://cdn.jsdelivr.net/gh/Nailington/3kh0-assets@aeb371b7e88542fd5e61eeed9e967a446d84fe1b/fruitninja/index.html',thumb:'&#x1F34E;',embed:true},
-  {id:'g22',title:'Stack',cat:'Arcade',desc:'Stack blocks',url:'https://cdn.jsdelivr.net/gh/Nailington/3kh0-assets@aeb371b7e88542fd5e61eeed9e967a446d84fe1b/stack/index.html',thumb:'&#x25A0;',embed:true},
-  {id:'g23',title:'Getaway Shootout',cat:'Action',desc:'Race and shoot',url:'https://cdn.jsdelivr.net/gh/Nailington/3kh0-assets@aeb371b7e88542fd5e61eeed9e967a446d84fe1b/getaway-shootout/index.html',thumb:'&#x1F3B2;',embed:true},
-  {id:'g24',title:'Drive Mad',cat:'Racing',desc:'Mad driving',url:'https://cdn.jsdelivr.net/gh/Nailington/3kh0-assets@aeb371b7e88542fd5e61eeed9e967a446d84fe1b/drive-mad/index.html',thumb:'&#x1F3CE;',embed:true}
-];
-
-var allCategories = ['All'];
-var _currentGame = null;
-
-function loadJSON(url){
-  try {
-    var ctrl = new AbortController();
-    var t = setTimeout(function(){ctrl.abort();}, 5000);
-    return fetch(url + '?v=' + Date.now(), {signal:ctrl.signal}).then(function(r){
-      clearTimeout(t);
-      if (!r.ok) return null;
-      return r.json();
-    }).catch(function(){return null;});
-  } catch(e) { return Promise.resolve(null); }
-}
-
-function cleanTitle(raw){
-  if (!raw) return 'Game';
-  var s = raw.trim();
-  // Remove parenthetical suffixes
-  s = s.replace(/ ?\(\d+\)/g,'');
-  // If already has spaces and mixed case, it's a proper title
-  if (s.includes(' ') && /[a-z]/.test(s) && /[A-Z]/.test(s)) return s;
-  // Capitalize first letter
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-function loadLocalGames(){
-  var games = [];
-  return loadJSON('games-data.json').then(function(data){
-    if (Array.isArray(data)){
-      data.forEach(function(g,i){
-        games.push({
-          id: 'local_' + i,
-          title: cleanTitle(g.t) || g.f.replace(/^cl/i,'').replace(/\.html$/,'').replace(/ ?\(\d+\)/g,'').trim(),
-          cat: g.c || 'Other',
-          url: g.f.replace(/ /g,'%20'),
-          thumb: (g.t||'G')[0].toUpperCase(),
-          embed: true,
-          local: true
-        });
-      });
-    }
-    return loadJSON('pizza-games.json').then(function(data2){
-      if (Array.isArray(data2)){
-        data2.forEach(function(g,i){
-          games.push({
-            id: 'pizza_' + i,
-            title: g.n,
-            cat: 'Web',
-            url: g.u,
-            thumb: g.n[0].toUpperCase(),
-            embed: true,
-            local: false,
-            external: true
-          });
-        });
-      }
-      return games;
-    });
-  });
-}
-
-function loadAllGames(){
-  var base = GAMES;
-  return loadLocalGames().then(function(local){
-    var merged = local && local.length ? [].concat(local) : [].concat(base);
-    var titles = {};
-    merged.forEach(function(g){titles[g.title.toLowerCase()]=true;});
-    if (local && local.length){
-      base.forEach(function(g){if (!titles[g.title.toLowerCase()]){merged.push(g);titles[g.title.toLowerCase()]=true;}});
-    }
-    if (AppState.sideloaded && AppState.sideloaded.length){
-      AppState.sideloaded.forEach(function(g,i){
-        if (!titles[g.title.toLowerCase()]){
-          merged.push({
-            id: 'sideload_' + i,
-            title: g.title,
-            cat: g.cat || 'Sideloaded',
-            url: g.dataUrl,
-            thumb: g.title[0].toUpperCase(),
-            embed: true,
-            local: false
-          });
-          titles[g.title.toLowerCase()] = true;
-        }
-      });
-    }
-    var cats = {};
-    merged.forEach(function(g){cats[g.cat]=true;});
-    allCategories = ['All'].concat(Object.keys(cats).sort());
-    return merged;
-  });
-}
-
-/* ===== Render ===== */
-function renderCatalog(catFilter){
-  var grid = document.getElementById('catalog-grid');
-  if (!grid) return;
-  var search = (document.getElementById('global-search').value||'').toLowerCase();
-  var sort = document.getElementById('sort-select').value;
-  grid.innerHTML = '';
-  if (!GAMES || !GAMES.length){
-    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-muted)">No games loaded</div>';
-    return;
-  }
-  var list = GAMES.filter(function(g){
-    if (catFilter && catFilter !== 'All' && g.cat !== catFilter) return false;
-    if (search && !g.title.toLowerCase().includes(search)) return false;
-    return true;
-  });
-  if (sort === 'a-z') list.sort(function(a,b){return a.title.localeCompare(b.title);});
-  else if (sort === 'z-a') list.sort(function(a,b){return b.title.localeCompare(a.title);});
-  if (!list.length){
-    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-muted)">No games match your search</div>';
-    return;
-  }
-  list.forEach(function(g){
-    var isFav = AppState.favorites.indexOf(g.id) !== -1;
-    var card = document.createElement('div');
-    card.className = 'game-card';
-    card.innerHTML =
-      '<div class="game-card-thumb"><div class="overlay"></div><span>' + g.thumb + '</span></div>' +
-      '<div class="game-card-body">' +
-        '<div class="game-card-title">' + g.title + '</div>' +
-        '<div class="game-card-cat">' + g.cat + '</div>' +
-        '<div class="game-card-footer">' +
-          '<button class="game-card-fav' + (isFav?' active':'') + '" data-id="' + g.id + '">' + (isFav?'&#x2764;':'&#x2661;') + '</button>' +
-          '<button class="game-card-play" data-id="' + g.id + '">Play</button>' +
-        '</div>' +
-      '</div>';
-    card.querySelector('.game-card-play').addEventListener('click', function(e){e.stopPropagation();openTheater(g);});
-    card.querySelector('.game-card-fav').addEventListener('click', function(e){
-      e.stopPropagation();
-      var idx = AppState.favorites.indexOf(g.id);
-      if (idx === -1) AppState.favorites.push(g.id);
-      else AppState.favorites.splice(idx,1);
-      AppState.saveFavorites();
-      renderCatalog(catFilter||currentCat);
-    });
-    card.addEventListener('click', function(){openTheater(g);});
-    grid.appendChild(card);
-  });
-}
-var currentCat = 'All';
-
-function renderCategories(){
-  var bar = document.getElementById('category-bar');
-  if (!bar) return;
-  bar.innerHTML = '';
-  allCategories.forEach(function(c){
-    var chip = document.createElement('button');
-    chip.className = 'cat-chip' + (c === currentCat ? ' active' : '');
-    chip.textContent = c;
-    chip.addEventListener('click', function(){
-      currentCat = c;
-      $$('.cat-chip').forEach(function(x){x.classList.remove('active');});
-      chip.classList.add('active');
-      renderCatalog(c === 'All' ? null : c);
-    });
-    bar.appendChild(chip);
-  });
-}
-
-/* ===== Theater ===== */
-function openTheater(game){
-  _currentGame = game;
-  var theater = document.getElementById('theater-view');
-  var frame = document.getElementById('theater-frame');
-  var title = document.getElementById('theater-title');
-  if (!theater || !frame) return;
-  theater.classList.add('open');
-  frame.src = game.url;
-  title.textContent = game.title;
-  AppState.analytics.launched++;
-  AppState.saveAnalytics();
-  var sc = document.getElementById('sidebar-game-count');
-  if (sc) sc.textContent = GAMES.length;
-}
-
-function closeTheater(){
-  var theater = document.getElementById('theater-view');
-  var frame = document.getElementById('theater-frame');
-  if (theater) theater.classList.remove('open');
-  if (frame) frame.src = '';
-}
-
-function goFullscreen(){
-  var frame = document.getElementById('theater-frame');
-  if (!frame) return;
-  if (frame.requestFullscreen) frame.requestFullscreen();
-  else if (frame.webkitRequestFullscreen) frame.webkitRequestFullscreen();
-}
-
-function goDownload(){
-  var g = _currentGame;
-  if (!g) { toast('No game selected','error'); return; }
-  if (g.local){
-    fetch(g.url).then(function(r){return r.text();}).then(function(html){
-      var blob = new Blob([html],{type:'text/html'});
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement('a');
-      a.href = url;
-      a.download = g.title.replace(/[^a-z0-9]/gi,'_').toLowerCase() + '.html';
-      a.click();
-      URL.revokeObjectURL(url);
-      toast('Downloaded: ' + g.title,'success');
-    }).catch(function(){toast('Download failed','error');});
-  } else {
-    toast('External game - try Sideload instead','error');
-  }
-}
-
-function goOpen(){
-  var g = _currentGame;
-  if (g && g.url) window.open(g.url, '_blank');
-}
-
-/* ===== Stealth Helpers ===== */
-function muteAllAudio(){
-  var audios = document.querySelectorAll('audio,video,iframe');
-  audios.forEach(function(el){
-    if (el.tagName === 'IFRAME') return;
-    el.pause(); el.muted = true;
-  });
-  toast('Audio muted','info');
-}
-
-function triggerPanic(){
-  muteAllAudio();
-  window.location.href = 'https://classroom.google.com';
-}
-
-function openAboutBlank(url){
-  var w = window.open('about:blank');
-  if (!w) { toast('Pop-up blocked','error'); return; }
-  var d = w.document;
-  d.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>My Drive - Google Drive</title><style>body{margin:0;overflow:hidden}iframe{width:100vw;height:100vh;border:none}</style></head><body><iframe src="' + url.replace(/"/g,'&quot;') + '"></iframe></body></html>');
-  d.close();
-  toast('Opened in blank pop-up','success');
-}
-
-var _backslashTimer = null;
-var _backslashCount = 0;
-function handleBackslash(){
-  _backslashCount++;
-  if (_backslashCount === 1){
-    _backslashTimer = setTimeout(function(){_backslashCount=0;}, 600);
-  }
-  if (_backslashCount >= 2){
-    clearTimeout(_backslashTimer);
-    _backslashCount = 0;
-    // Double backslash — only in settings/admin: wipe localStorage
-    if (document.getElementById('admin-panel') && document.getElementById('admin-panel').classList.contains('open')){
-      if (confirm('Wipe all local data?')){
-        localStorage.clear();
-        toast('All local data wiped','info');
-        setTimeout(function(){location.reload();},500);
-      }
-    } else {
-      triggerPanic();
-    }
-    return;
-  }
-  // Single backslash
-  triggerPanic();
-}
-
-/* ===== Admin ===== */
-function initAdminGateway(){}
-function renderAdmin(){
-  var closeBtn = document.getElementById('admin-close');
-  if (closeBtn){
-    closeBtn.addEventListener('click', function(){
-      document.getElementById('admin-panel').classList.remove('open');
-      AppState.adminAuthed = false;
-      AppState.saveAdminAuthed();
-    });
-  }
-  $$('.admin-tab').forEach(function(tab){
-    tab.addEventListener('click', function(){
-      $$('.admin-tab').forEach(function(t){t.classList.remove('active');});
-      tab.classList.add('active');
-      $$('.admin-tab-content').forEach(function(c){c.classList.remove('active');});
-      var content = $('[data-atab-content="' + tab.dataset.atab + '"]');
-      if (content) content.classList.add('active');
-      if (tab.dataset.atab === 'analytics') renderAnalytics();
-      if (tab.dataset.atab === 'profiles') renderSessions();
-      if (tab.dataset.atab === 'uploader') renderUploader();
-      if (tab.dataset.atab === 'games') renderGamesManagement();
-      if (tab.dataset.atab === 'broadcast') renderBroadcastManagement();
-    });
-  });
-  renderSessions();
-  renderCanvas();
-  renderAppearance();
-}
-
-function renderGamesManagement(){
-  var body = document.getElementById('games-manage-body');
-  if(!body) return;
-  loadJSON('games-data.json').then(function(games){
-    if(!games) return;
-    var counts = {};
-    games.forEach(function(g){ counts[g.t] = (counts[g.t]||0) + 1; });
-    body.innerHTML = games.map(function(g){
-      var isDup = counts[g.t] > 1;
-      return '<tr style="'+(isDup?'background:rgba(239,68,68,0.1)':'')+'"><td>'+g.t+'</td><td>'+g.f+'</td><td><button class="delete-game-btn" data-f="'+g.f+'" style="color:var(--accent-red);cursor:pointer">Delete</button></td></tr>';
-    }).join('');
-    $$('.delete-game-btn').forEach(function(btn){
-      btn.addEventListener('click', function(){
-        if(!confirm('Delete '+btn.dataset.f+'?')) return;
-        fetch('/delete-game', {method:'POST',body:JSON.stringify({filename:btn.dataset.f})})
-        .then(function(){toast('Deleted','success'); renderGamesManagement();});
-      });
-    });
-  });
-}
-function renderBroadcastManagement(){
-  var btn = document.getElementById('broadcast-submit');
-  var txt = document.getElementById('broadcast-text');
-  if(btn){
-    btn.addEventListener('click', function(){
-      fetch('/broadcast', {method:'POST',body:JSON.stringify({text:txt.value, admin: AppState.user})})
-      .then(function(){toast('Broadcast sent','success');});
-    });
-  }
-}
-function renderSessions(){
-  var body = document.getElementById('sessions-body');
-  if (!body) return;
-  var sessions = AppState.sessions;
-  if (!sessions || !sessions.length){
-    body.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:20px;color:var(--text-muted)">No active sessions</td></tr>';
-    return;
-  }
-  body.innerHTML = sessions.map(function(s){
-    return '<tr><td>' + s.handle + '</td><td>' + new Date(s.loginTime).toLocaleString() + '</td><td>' + (s.gamesPlayed||0) + '</td></tr>';
-  }).join('');
-}
-function renderCanvas(){
-  var editor = document.getElementById('admin-canvas-editor');
-  var btn = document.getElementById('canvas-update-btn');
-  if (editor) editor.value = AppState.canvas;
-  if (btn){
-    btn.addEventListener('click', function(){
-      AppState.canvas = (editor?editor.value:'').trim() || 'Welcome to Cache';
-      AppState.saveCanvas();
-      toast('Canvas updated','success');
-    });
-  }
-}
-function renderAnalytics(){
-  var el1 = document.getElementById('stat-sessions');
-  var el2 = document.getElementById('stat-launched');
-  var el3 = document.getElementById('stat-favs');
-  if (el1) el1.textContent = AppState.analytics.sessions || 0;
-  if (el2) el2.textContent = AppState.analytics.launched || 0;
-  if (el3) el3.textContent = AppState.favorites.length;
-}
-function renderAppearance(){
-  var s = AppState.settings;
-  var picker = document.getElementById('color-picker');
-  if (picker){
-    var colors = ['#2563eb','#06b6d4','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#6366f1'];
-    picker.innerHTML = '';
-    colors.forEach(function(c){
-      var swatch = document.createElement('div');
-      swatch.className = 'color-swatch' + (s.accent === c ? ' active' : '');
-      swatch.style.background = c;
-      swatch.addEventListener('click', function(){
-        s.accent = c; AppState.saveSettings(); AppState._applySettings();
-        $$('.color-swatch').forEach(function(x){x.classList.remove('active');});
-        swatch.classList.add('active');
-      });
-      picker.appendChild(swatch);
-    });
-  }
-  var opts = document.getElementById('appearance-options');
-  if (opts){
-    var html = '';
-    // Theme presets
-    html += '<h3 style="font-size:0.9rem;font-weight:600;margin:16px 0 8px">Theme Presets</h3><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">';
-    var themes = [
-      {label:'Neon Cyberpunk',accent:'#00ff88',bg:'#0a0015'},
-      {label:'Pastel Blue',accent:'#7ec8e3',bg:'#1a1a2e'},
-      {label:'AMOLED Black',accent:'#6366f1',bg:'#000000'},
-      {label:'Default',accent:'#2563eb',bg:'#0a0a1a'}
-    ];
-    themes.forEach(function(t){
-      html += '<button class="theme-preset" data-accent="' + t.accent + '" style="padding:6px 14px;border-radius:8px;border:1px solid var(--glass-border);background:rgba(255,255,255,0.03);color:var(--text-secondary);font-size:0.78rem;cursor:pointer;font-family:\'Inter\',sans-serif;transition:all 0.2s">' + t.label + '</button>';
-    });
-    html += '</div>';
-    // Stealth
-    html += '<div class="stealth-row"><div><div style="font-size:0.85rem;font-weight:500">Stealth Mode</div><div style="font-size:0.75rem;color:var(--text-muted)">Disguises tab as Google Drive</div></div><button id="stealth-toggle" class="stealth-toggle' + (s.stealth?' active':'') + '"></button></div>';
-    // Compact grid
-    html += '<div class="stealth-row"><div><div style="font-size:0.85rem;font-weight:500">Compact Grid</div><div style="font-size:0.75rem;color:var(--text-muted)">Smaller cards for more items</div></div><button id="compact-toggle" class="stealth-toggle' + (s.compactGrid?' active':'') + '"></button></div>';
-    // Low data
-    html += '<div class="stealth-row"><div><div style="font-size:0.85rem;font-weight:500">Low-Data Mode</div><div style="font-size:0.75rem;color:var(--text-muted)">Hide graphics for slow networks</div></div><button id="lowdata-toggle" class="stealth-toggle' + (s.lowData?' active':'') + '"></button></div>';
-    // Font
-    html += '<div class="stealth-row"><div><div style="font-size:0.85rem;font-weight:500">Font</div></div><select id="font-select" style="padding:6px 12px;border-radius:8px;border:1px solid var(--glass-border);background:rgba(0,0,0,0.3);color:var(--text-secondary);font-size:0.8rem;outline:none;font-family:\'Inter\',sans-serif"><option value="\'Inter\',sans-serif" ' + (s.font==="'Inter',sans-serif"?'selected':'') + '>Inter</option><option value="\'Courier New\',monospace" ' + (s.font==="'Courier New',monospace"?'selected':'') + '>Monospace</option><option value="\'Georgia\',serif" ' + (s.font==="'Georgia',serif"?'selected':'') + '>Serif</option></select></div>';
-    // Wallpaper
-    html += '<div class="stealth-row"><div><div style="font-size:0.85rem;font-weight:500">Wallpaper URL</div><div style="font-size:0.75rem;color:var(--text-muted)">Paste direct image link</div></div><input id="wallpaper-input" type="text" value="' + (s.wallpaper||'') + '" placeholder="https://..." style="width:160px;padding:6px 10px;border-radius:8px;border:1px solid var(--glass-border);background:rgba(0,0,0,0.3);color:var(--text-primary);font-size:0.8rem;outline:none;font-family:\'Inter\',sans-serif"></div>';
-    // Cursor
-    html += '<div class="stealth-row"><div><div style="font-size:0.85rem;font-weight:500">Cursor Style</div></div><select id="cursor-select" style="padding:6px 12px;border-radius:8px;border:1px solid var(--glass-border);background:rgba(0,0,0,0.3);color:var(--text-secondary);font-size:0.8rem;outline:none;font-family:\'Inter\',sans-serif"><option value="default">Default</option><option value="crosshair" ' + (s.cursor==='crosshair'?'selected':'') + '>Crosshair</option><option value="pointer" ' + (s.cursor==='pointer'?'selected':'') + '>Pointer</option><option value="cell" ' + (s.cursor==='cell'?'selected':'') + '>Cell</option></select></div>';
-    opts.innerHTML = html;
-    // Bind events
-    document.querySelectorAll('.theme-preset').forEach(function(btn){
-      btn.addEventListener('click', function(){
-        var accent = this.dataset.accent;
-        s.accent = accent; AppState.saveSettings(); AppState._applySettings();
-        toast('Theme: ' + this.textContent, 'success');
-      });
-    });
-    var st = document.getElementById('stealth-toggle');
-    if (st) st.addEventListener('click', function(){s.stealth=!s.stealth;AppState.saveSettings();AppState._applySettings();st.classList.toggle('active');});
-    var ct = document.getElementById('compact-toggle');
-    if (ct) ct.addEventListener('click', function(){s.compactGrid=!s.compactGrid;AppState.saveSettings();AppState._applySettings();ct.classList.toggle('active');});
-    var lt = document.getElementById('lowdata-toggle');
-    if (lt) lt.addEventListener('click', function(){s.lowData=!s.lowData;AppState.saveSettings();AppState._applySettings();lt.classList.toggle('active');});
-    var fs = document.getElementById('font-select');
-    if (fs) fs.addEventListener('change', function(){s.font=fs.value;AppState.saveSettings();AppState._applySettings();});
-    var wi = document.getElementById('wallpaper-input');
-    if (wi) wi.addEventListener('change', function(){s.wallpaper=wi.value;AppState.saveSettings();AppState._applySettings();});
-    var cs = document.getElementById('cursor-select');
-    if (cs) cs.addEventListener('change', function(){s.cursor=cs.value;document.body.style.cursor=cs.value;AppState.saveSettings();});
-  }
-  var resetBtn = document.getElementById('reset-colors-btn');
-  if (resetBtn){
-    resetBtn.addEventListener('click', function(){
-      s = { accent: '#2563eb', stealth: false, cardSize: 'medium', animations: true, backslashPanic: true, compactGrid: false, lowData: false, showFps: false, font: "'Inter',sans-serif", wallpaper: '', cursor: 'default' };
-      AppState.settings = s; AppState.saveSettings(); AppState._applySettings();
-      renderAppearance(); toast('Settings reset','success');
-    });
-  }
-}
-function renderUploader(){
-  var dropZone = document.getElementById('drop-zone');
-  var fileInput = document.getElementById('file-input');
-  var submitBtn = document.getElementById('upload-submit');
-  var titleInput = document.getElementById('upload-title');
-  var catInput = document.getElementById('upload-category');
-  var status = document.getElementById('upload-status');
-  var uploadedFile = null;
-  if (dropZone && fileInput){
-    dropZone.addEventListener('click', function(){fileInput.click();});
-    dropZone.addEventListener('dragover', function(e){e.preventDefault();dropZone.classList.add('drag-over');});
-    dropZone.addEventListener('dragleave', function(){dropZone.classList.remove('drag-over');});
-    dropZone.addEventListener('drop', function(e){
-      e.preventDefault();
-      dropZone.classList.remove('drag-over');
-      if (e.dataTransfer.files.length){
-        uploadedFile = e.dataTransfer.files[0];
-        if (status) status.textContent = 'File: ' + uploadedFile.name;
-      }
-    });
-    fileInput.addEventListener('change', function(){
-      if (fileInput.files.length){
-        uploadedFile = fileInput.files[0];
-        if (status) status.textContent = 'File: ' + uploadedFile.name;
-      }
-    });
-  }
-  if (submitBtn){
-    submitBtn.addEventListener('click', function(){
-      if (!uploadedFile){
-        if (status) status.textContent = 'Please select a file first';
-        return;
-      }
-      var reader = new FileReader();
-      reader.onload = function(e){
-        var content = e.target.result;
-        var title = titleInput ? titleInput.value.trim() : '';
-        var category = catInput ? catInput.value.trim() : 'Sideloaded';
-        if (!title) title = uploadedFile.name.replace(/\.html$/i,'');
-        fetch('/upload-game', {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({filename:uploadedFile.name,content:content,title:title,category:category})
-        }).then(function(r){return r.json();}).then(function(data){
-          if (data.success){
-            if (status) status.textContent = 'Uploaded! Reloading catalog...';
-            toast('Game uploaded: ' + title,'success');
-            loadAllGames().then(function(games){
-              if (games && games.length){GAMES = games;renderCategories();renderCatalog(currentCat==='All'?null:currentCat);var sc2=document.getElementById('sidebar-game-count');if(sc2)sc2.textContent=GAMES.length;}
-            });
-          } else {
-            if (status) status.textContent = 'Upload failed: ' + (data.error||'unknown');
-          }
-        }).catch(function(){if (status) status.textContent = 'Upload error - server running?';});
-      };
-      reader.readAsText(uploadedFile);
-    });
-  }
-}
-
-/* ===== Sections ===== */
-var sections = {};
-
-function showSection(name){
-  var pages = document.getElementById('section-pages');
-  $$('#main-content > #catalog-container, #main-content > #category-bar, #main-content > #global-search, #main-content > #sort-select, #main-content > #clear-search').forEach(function(el){
-    if (el && el.style) el.style.display = name === 'catalog' || !name ? '' : 'none';
-  });
-  if (!pages) return;
-  pages.style.display = name && name !== 'catalog' ? 'block' : 'none';
-  if (!name || name === 'catalog'){
-    $$('.sidebar-link').forEach(function(l){l.style.background='transparent';});
-    renderCatalog(currentCat === 'All' ? null : currentCat);
-    return;
-  }
-  $$('.sidebar-link').forEach(function(l){l.style.background = l.dataset.section === name ? 'rgba(37,99,235,0.15)' : 'transparent';});
-  if (sections[name]) { pages.innerHTML = sections[name]; return; }
-  if (name === 'sideloader'){
-    pages.innerHTML = '<div class="glass" style="padding:24px;max-width:600px;margin:0 auto"><h2 style="font-size:1.2rem;font-weight:700;margin-bottom:16px">Sideload Games</h2><div id="drop-zone" style="min-height:160px;border:2px dashed var(--glass-border);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;cursor:pointer;color:var(--text-secondary)"><div style="font-size:2.5rem;opacity:0.5">&#x2B06;</div><div>Drop HTML file or click to browse</div></div><input type="file" id="sideload-input" accept=".html" style="display:none"><div style="margin-top:12px;display:flex;gap:8px"><input type="text" id="sideload-title" placeholder="Title" style="flex:1;padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);background:rgba(0,0,0,0.3);color:var(--text-primary);font-size:0.85rem;outline:none;font-family:\'Inter\',sans-serif"><input type="text" id="sideload-cat" placeholder="Category" style="width:120px;padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);background:rgba(0,0,0,0.3);color:var(--text-primary);font-size:0.85rem;outline:none;font-family:\'Inter\',sans-serif"><button id="sideload-submit" style="padding:10px 20px;border-radius:10px;border:none;background:var(--accent-primary);color:#fff;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:\'Inter\',sans-serif">Upload</button></div><div id="sideload-status" style="margin-top:8px;font-size:0.8rem;color:var(--text-muted)"></div></div>';
-    sections[name] = pages.innerHTML;
-    var dz = document.getElementById('sideload-input');
-    var dzBtn = pages.querySelector('#drop-zone');
-    if (dz && dzBtn) dzBtn.addEventListener('click',function(){dz.click();});
-    var subBtn = document.getElementById('sideload-submit');
-    if (subBtn) subBtn.addEventListener('click',function(){
-      if (!dz || !dz.files.length){document.getElementById('sideload-status').textContent='Select a file';return;}
-      var r = new FileReader();
-      r.onload = function(e){
-        var title = (document.getElementById('sideload-title')||{}).value || dz.files[0].name.replace(/\.html$/i,'');
-        var cat = (document.getElementById('sideload-cat')||{}).value || 'Sideloaded';
-        var dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(e.target.result);
-        AppState.sideloaded.push({title:title,cat:cat,dataUrl:dataUrl});
-        AppState.saveSideloaded();
-        document.getElementById('sideload-status').textContent='Saved locally for ' + (AppState.user||'you');
-        toast('Sideloaded: ' + title,'success');
-        loadAllGames().then(function(games){
-          GAMES = games;
-          renderCategories();
-          renderCatalog(currentCat === 'All' ? null : currentCat);
-          var sc2 = document.getElementById('sidebar-game-count');
-          if (sc2) sc2.textContent = GAMES.length;
-        });
-      };
-      r.readAsText(dz.files[0]);
-    });
-  } else if (name === 'stealth'){
-    pages.innerHTML = '<div class="glass" style="padding:24px;max-width:600px;margin:0 auto"><h2 style="font-size:1.2rem;font-weight:700;margin-bottom:16px">Stealth Suite</h2><div id="stealth-options"></div></div>';
-    sections[name] = pages.innerHTML;
-    var so = document.getElementById('stealth-options');
-    if (so){
-      var stealthOn = AppState.settings.stealth;
-      var bpOn = AppState.settings.backslashPanic !== false;
-      so.innerHTML =
-        '<div class="stealth-row"><div><div style="font-size:0.85rem;font-weight:500">Tab Disguiser</div><div style="font-size:0.75rem;color:var(--text-muted)">Changes title + icon to Google Drive</div></div><button id="stealth-toggle2" class="stealth-toggle' + (stealthOn?' active':'') + '"></button></div>'
-        + '<div class="stealth-row" style="margin-top:8px"><div><div style="font-size:0.85rem;font-weight:500">Backslash Panic Key</div><div style="font-size:0.75rem;color:var(--text-muted)">Press \\ to redirect to Google Classroom</div></div><button id="bp-toggle" class="stealth-toggle' + (bpOn?' active':'') + '"></button></div>'
-        + '<div class="stealth-row" style="margin-top:8px"><div><div style="font-size:0.85rem;font-weight:500">Ctrl+Shift+P Panic</div><div style="font-size:0.75rem;color:var(--text-muted)">Keyboard shortcut to escape</div></div><button id="panic-test-btn" style="padding:8px 16px;border-radius:8px;border:1px solid var(--glass-border);background:transparent;color:var(--text-secondary);font-size:0.8rem;cursor:pointer;font-family:\'Inter\',sans-serif">Test Panic</button></div>'
-        + '<div style="margin-top:16px;padding:12px;background:rgba(255,255,255,0.03);border-radius:10px;font-size:0.8rem;color:var(--text-muted)"><strong style="color:var(--text-secondary)">&#x2139; History-Free Mode:</strong> Use the shield icon &#x1F6E1; in the theater dock to open games in an about:blank pop-up that won\'t appear in your history.</div>'
-        + '<div style="margin-top:8px;padding:12px;background:rgba(255,255,255,0.03);border-radius:10px;font-size:0.8rem;color:var(--text-muted)"><strong style="color:var(--text-secondary)">&#x2139; Data Wipe:</strong> Press \\ twice rapidly while admin panel is open to wipe all local data.</div>';
-      var st2 = document.getElementById('stealth-toggle2');
-      if (st2) st2.addEventListener('click', function(){AppState.settings.stealth=!AppState.settings.stealth;AppState.saveSettings();AppState._applySettings();st2.classList.toggle('active');});
-      var bpT = document.getElementById('bp-toggle');
-      if (bpT) bpT.addEventListener('click', function(){AppState.settings.backslashPanic=!AppState.settings.backslashPanic;AppState.saveSettings();bpT.classList.toggle('active');});
-      var panicTest = document.getElementById('panic-test-btn');
-      if (panicTest) panicTest.addEventListener('click', function(){triggerPanic();});
-    }
-  } else if (name === 'exploits'){
-    pages.innerHTML = '<div class="glass" style="padding:24px;max-width:800px;margin:0 auto"><h2 style="font-size:1.2rem;font-weight:700;margin-bottom:16px">School Exploits</h2><div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:16px">Click to copy or open</div><div id="exploit-list"></div></div>';
-    sections[name] = pages.innerHTML;
-    var exploits = [
-      {title:'Google Translate Proxy',code:'javascript:window.location.href=\'https://translate.google.com/translate?sl=auto&tl=en&u=\'+encodeURIComponent(location.href);',desc:'Bypass block via Google Translate'},
-      {title:'Google Cache Mirror',code:'javascript:window.location.href=\'https://webcache.googleusercontent.com/search?q=cache:\'+encodeURIComponent(location.href);',desc:'View cached version via Google'},
-      {title:'Wayback Machine',code:'javascript:window.location.href=\'https://web.archive.org/web/*/\'+encodeURIComponent(location.href);',desc:'Check archived versions'},
-      {title:'About:Blank Cloak',code:'javascript:var w=window.open(\'about:blank\');var d=w.document;d.write(\'<iframe src="\'+location.href+\'" style="width:100vw;height:100vh;border:none"></iframe>\');d.title=\'Google Docs\';',desc:'Mirror in about:blank window'},
-      {title:'View Page Source',code:'javascript:alert(document.documentElement.outerHTML.substring(0,5000));',desc:'View page source in alert'},
-      {title:'Inspect Element',code:'javascript:alert(\'Right-click + Inspect or Ctrl+Shift+I\')',desc:'Open dev tools info'},
-    ];
-    var el = document.getElementById('exploit-list');
-    if (el){
-      exploits.forEach(function(ex){
-        var row = document.createElement('div');
-        row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(255,255,255,0.03);border-radius:10px;margin-bottom:6px';
-        row.innerHTML = '<div><div style="font-size:0.85rem;font-weight:500">' + ex.title + '</div><div style="font-size:0.75rem;color:var(--text-muted)">' + ex.desc + '</div></div><button class="exploit-btn" style="padding:6px 14px;border-radius:8px;border:1px solid var(--glass-border);background:transparent;color:var(--text-secondary);font-size:0.75rem;cursor:pointer;font-family:\'Inter\',sans-serif">Copy Code</button>';
-        row.querySelector('.exploit-btn').addEventListener('click', function(){
-          navigator.clipboard.writeText(ex.code).then(function(){toast('Copied: ' + ex.title,'success');}).catch(function(){toast('Click to copy manually','error');});
-        });
-        el.appendChild(row);
-      });
-    }
-  } else if (name === 'settings'){
-    pages.innerHTML = '<div class="glass" style="padding:24px;max-width:600px;margin:0 auto"><h2 style="font-size:1.2rem;font-weight:700;margin-bottom:16px">Settings</h2><div id="settings-list"></div></div>';
-    sections[name] = pages.innerHTML;
-    var sl = document.getElementById('settings-list');
-    if (sl){
-      sl.innerHTML =
-        '<div class="stealth-row"><div><div style="font-size:0.85rem;font-weight:500">Animations</div></div><button id="toggle-anim" class="stealth-toggle' + (AppState.settings.animations?' active':'') + '"></button></div>'
-        + '<div class="stealth-row" style="margin-top:8px"><div><div style="font-size:0.85rem;font-weight:500">Card Size</div></div><select id="card-size-select" style="padding:6px 12px;border-radius:8px;border:1px solid var(--glass-border);background:rgba(0,0,0,0.3);color:var(--text-secondary);font-size:0.8rem;outline:none;font-family:\'Inter\',sans-serif"><option value="small">Small</option><option value="medium" ' + (AppState.settings.cardSize==='medium'?'selected':'') + '>Medium</option><option value="large" ' + (AppState.settings.cardSize==='large'?'selected':'') + '>Large</option></select></div>'
-        + '<div class="stealth-row" style="margin-top:8px"><div><div style="font-size:0.85rem;font-weight:500">FPS Counter</div><div style="font-size:0.75rem;color:var(--text-muted)">Show rendering speed in footer</div></div><button id="fps-toggle" class="stealth-toggle' + (AppState.settings.showFps?' active':'') + '"></button></div>'
-        + '<div class="stealth-row" style="margin-top:8px"><div><div style="font-size:0.85rem;font-weight:500">Memory Cleanup</div><div style="font-size:0.75rem;color:var(--text-muted)">Flush browser cache</div></div><button id="mem-cleanup-btn" style="padding:6px 14px;border-radius:8px;border:1px solid var(--glass-border);background:transparent;color:var(--text-secondary);font-size:0.75rem;cursor:pointer;font-family:\'Inter\',sans-serif">Clean Up</button></div>';
-      var animBtn = document.getElementById('toggle-anim');
-      if (animBtn){
-        animBtn.addEventListener('click', function(){
-          AppState.settings.animations = !AppState.settings.animations;
-          AppState.saveSettings();
-          animBtn.classList.toggle('active');
-          document.documentElement.style.setProperty('--anim-speed', AppState.settings.animations ? '0.3s' : '0s');
-        });
-      }
-      var sizeSelect = document.getElementById('card-size-select');
-      if (sizeSelect){
-        sizeSelect.addEventListener('change', function(){
-          AppState.settings.cardSize = sizeSelect.value;
-          AppState.saveSettings();
-          toast('Card size: ' + sizeSelect.value, 'info');
-        });
-      }
-      var fpsBtn = document.getElementById('fps-toggle');
-      if (fpsBtn){
-        fpsBtn.addEventListener('click', function(){
-          AppState.settings.showFps = !AppState.settings.showFps;
-          AppState.saveSettings();
-          fpsBtn.classList.toggle('active');
-          var fpsEl = document.getElementById('fps-counter');
-          if (fpsEl) fpsEl.style.display = AppState.settings.showFps ? 'block' : 'none';
-        });
-      }
-      var memBtn = document.getElementById('mem-cleanup-btn');
-      if (memBtn){
-        memBtn.addEventListener('click', function(){
-          if ('caches' in window){caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k);}));});}
-          toast('Cache flushed','success');
-        });
-      }
-    }
-  } else if (name === 'pomodoro'){
-    if (!sections[name]){
-      pages.innerHTML = '<div class="glass" style="padding:24px;max-width:500px;margin:0 auto"><h2 style="font-size:1.2rem;font-weight:700;margin-bottom:16px">&#x23F1; Focus Timer</h2><div style="text-align:center;padding:20px 0"><div id="pomodoro-display" style="font-size:4rem;font-weight:800;font-variant-numeric:tabular-nums;margin-bottom:16px;background:linear-gradient(135deg,var(--accent-primary),var(--accent-cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent">25:00</div><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button id="pomo-start" style="padding:10px 24px;border-radius:10px;border:none;background:var(--accent-green);color:#fff;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:\'Inter\',sans-serif">Start</button><button id="pomo-reset" style="padding:10px 24px;border-radius:10px;border:1px solid var(--glass-border);background:transparent;color:var(--text-secondary);font-size:0.85rem;cursor:pointer;font-family:\'Inter\',sans-serif">Reset</button></div><div style="margin-top:12px;display:flex;gap:8px;justify-content:center"><button class="pomo-mode" data-min="25" style="padding:6px 14px;border-radius:8px;border:1px solid var(--glass-border);background:rgba(255,255,255,0.05);color:var(--text-secondary);font-size:0.78rem;cursor:pointer;font-family:\'Inter\',sans-serif">25m Focus</button><button class="pomo-mode" data-min="5" style="padding:6px 14px;border-radius:8px;border:1px solid var(--glass-border);background:transparent;color:var(--text-secondary);font-size:0.78rem;cursor:pointer;font-family:\'Inter\',sans-serif">5m Break</button><button class="pomo-mode" data-min="10" style="padding:6px 14px;border-radius:8px;border:1px solid var(--glass-border);background:transparent;color:var(--text-secondary);font-size:0.78rem;cursor:pointer;font-family:\'Inter\',sans-serif">10m Break</button></div></div></div>';
-      sections[name] = pages.innerHTML;
-    }
-    pages.innerHTML = sections[name];
-    var pomoRemaining = 1500, pomoRunning = false, pomoTimer = null;
-    var pomoDisp = document.getElementById('pomodoro-display');
-    function pomoUpdate(){if(pomoDisp){var m=Math.floor(pomoRemaining/60);var s=pomoRemaining%60;pomoDisp.textContent=m+':'+(s<10?'0':'')+s;}}
-    function pomoStop(){pomoRunning=false;if(pomoTimer){clearInterval(pomoTimer);pomoTimer=null;}var btn=document.getElementById('pomo-start');if(btn)btn.textContent='Start';}
-    var startBtn = document.getElementById('pomo-start');
-    if (startBtn) startBtn.addEventListener('click', function(){
-      if (pomoRunning){pomoStop();return;}
-      pomoRunning = true; startBtn.textContent = 'Pause';
-      pomoTimer = setInterval(function(){if(pomoRemaining>0){pomoRemaining--;pomoUpdate();}else{pomoStop();toast('Time\'s up!','info');}},1000);
-    });
-    var resetBtn = document.getElementById('pomo-reset');
-    if (resetBtn) resetBtn.addEventListener('click', function(){pomoStop();pomoRemaining=1500;pomoUpdate();});
-    document.querySelectorAll('.pomo-mode').forEach(function(btn){
-      btn.addEventListener('click', function(){
-        pomoStop(); pomoRemaining = parseInt(this.dataset.min) * 60; pomoUpdate();
-        document.querySelectorAll('.pomo-mode').forEach(function(b){b.style.background='transparent';});
-        this.style.background = 'rgba(255,255,255,0.05)';
-      });
-    });
-  }
-}
-
-/* ===== FPS Counter ===== */
-var _fpsFrames = 0, _fpsLast = 0;
-function initFpsCounter(){
-  var fpsEl = document.getElementById('fps-counter');
-  var valEl = document.getElementById('fps-value');
-  if (!fpsEl || !valEl) return;
-  fpsEl.style.display = AppState.settings.showFps ? 'block' : 'none';
-  if (!AppState.settings.showFps) return;
-  function tick(){
-    _fpsFrames++;
-    var now = performance.now();
-    if (now - _fpsLast >= 1000){
-      valEl.textContent = _fpsFrames;
-      _fpsFrames = 0;
-      _fpsLast = now;
-    }
-    if (AppState.settings.showFps) requestAnimationFrame(tick);
-  }
-  tick();
-}
-
-/* ===== Init ===== */
-function initGateway(){
-  var overlay = document.getElementById('gateway-overlay');
-  var input = document.getElementById('username-input');
-  var errEl = document.getElementById('gateway-error');
-  var submit = document.getElementById('gateway-submit');
-  var gc = document.getElementById('gateway-game-count');
-
-  if (AppState.user && AppState.user !== 'Guest'){
-    overlay.classList.add('removed');
-    overlay.style.display = 'none';
-    document.getElementById('app-wrapper').style.display = 'block';
-    AppState._syncSessions();
-    AppState._syncWidgets();
-    window.initApp();
-    return;
-  }
-  if (gc) gc.textContent = GAMES.length;
-  function enter(){
-    var name = (input?input.value:'').trim();
-    if (!name) { if (errEl) errEl.textContent = 'Enter a handle'; if (input) input.classList.add('error'); return; }
-    if (name.length < 2) { if (errEl) errEl.textContent = 'At least 2 characters'; if (input) input.classList.add('error'); return; }
-    AppState.user = name;
-    AppState.saveUser();
-    AppState._syncSessions();
-    overlay.style.display = 'none';
-    document.getElementById('app-wrapper').style.display = 'block';
-    window.initApp();
-  }
-  if (submit) submit.addEventListener('click', enter);
-  if (input){
-    input.addEventListener('keydown', function(e){if (e.key==='Enter') enter();});
-    input.addEventListener('input', function(){if (errEl) errEl.textContent='';if (input) input.classList.remove('error');});
-  }
-}
-
-window.initApp = function(){
-  try { AppState._applySettings(); } catch(e){}
-  try { initNav(); } catch(e){}
-  try { renderCategories(); } catch(e){}
-  try { renderCatalog(); } catch(e){}
-  try { initTheater(); } catch(e){}
-  try { initAdminGateway(); } catch(e){}
-  try { initFpsCounter(); } catch(e){}
-  var sc = document.getElementById('sidebar-game-count');
-  if (sc) sc.textContent = GAMES.length;
-  loadAllGames().then(function(games){
-    if (games && games.length){
-      GAMES = games;
-      try { renderCategories(); } catch(e){}
-      try { renderCatalog(); } catch(e){}
-      try { var sc2 = document.getElementById('sidebar-game-count'); if (sc2) sc2.textContent = GAMES.length; } catch(e){}
-      try { toast('Loaded ' + GAMES.length + ' games','success'); } catch(e){}
-    }
-  }).catch(function(){});
-};
-
-function renderAlphaIndex(){
-  var bar = document.getElementById('alpha-index');
-  if (!bar) return;
-  var letters = '#ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-  bar.innerHTML = letters.map(function(l){
-    return '<button class="alpha-link" data-letter="' + l + '" style="padding:2px 8px;border-radius:4px;border:none;background:transparent;color:var(--text-muted);font-size:0.7rem;cursor:pointer;font-family:\'Inter\',sans-serif;transition:all 0.2s">' + l + '</button>';
-  }).join('');
-  bar.querySelectorAll('.alpha-link').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      var letter = this.dataset.letter;
-      var search = document.getElementById('global-search');
-      if (search){
-        if (letter === '#') search.value = '';
-        else search.value = letter.toLowerCase();
-        renderCatalog(currentCat === 'All' ? null : currentCat);
-      }
-    });
-  });
-}
-
-function initNav(){
-  var sidebar = document.getElementById('sidebar');
-  var toggle = document.getElementById('sidebar-toggle');
-  if (toggle && sidebar){
-    toggle.style.display = window.innerWidth <= 768 ? 'block' : 'none';
-    toggle.addEventListener('click', function(){sidebar.classList.toggle('open');sidebar.style.transform=sidebar.classList.contains('open')?'translateX(0)':'translateX(-100%)';});
-    window.addEventListener('resize', function(){toggle.style.display = window.innerWidth <= 768 ? 'block' : 'none';if(window.innerWidth>768){sidebar.style.transform='';sidebar.classList.remove('open');}});
-  }
-  $$('.sidebar-link').forEach(function(link){
-    if (link.id === 'panic-btn-sidebar'){
-      link.addEventListener('click', function(){triggerPanic();});
-      return;
-    }
-    var section = link.dataset.section;
-    if (section) link.addEventListener('click', function(){showSection(section);});
-  });
-  var search = document.getElementById('global-search');
-  var clearBtn = document.getElementById('clear-search');
-  var sort = document.getElementById('sort-select');
-  var randomBtn = document.getElementById('random-game-btn');
-  if (search) search.addEventListener('input', function(){renderCatalog(currentCat === 'All' ? null : currentCat);});
-  if (clearBtn) clearBtn.addEventListener('click', function(){if(search)search.value='';renderCatalog(currentCat==='All'?null:currentCat);});
-  if (sort) sort.addEventListener('change', function(){renderCatalog(currentCat==='All'?null:currentCat);});
-  if (randomBtn) randomBtn.addEventListener('click', function(){
-    if (!GAMES || !GAMES.length){toast('No games loaded','error');return;}
-    var g = GAMES[Math.floor(Math.random() * GAMES.length)];
-    if (g) openTheater(g);
-  });
-  renderAlphaIndex();
-  showSection('catalog');
-}
-
-function initTheater(){
-  var back = document.getElementById('theater-back');
-  var full = document.getElementById('theater-fullscreen');
-  var dload = document.getElementById('theater-download');
-  var dback = document.getElementById('dock-back');
-  var drel = document.getElementById('dock-reload');
-  var dfull = document.getElementById('dock-fullscreen');
-  var ddload = document.getElementById('dock-download');
-  var dopen = document.getElementById('dock-open');
-  if (back) back.addEventListener('click', closeTheater);
-  if (full) full.addEventListener('click', goFullscreen);
-  if (dload) dload.addEventListener('click', goDownload);
-  if (dback) dback.addEventListener('click', closeTheater);
-  if (drel) drel.addEventListener('click', function(){var f=document.getElementById('theater-frame');if(f)f.src=f.src;});
-  if (dfull) dfull.addEventListener('click', goFullscreen);
-  if (ddload) ddload.addEventListener('click', goDownload);
-  if (dopen) dopen.addEventListener('click', goOpen);
-  var dcloak = document.getElementById('dock-cloak');
-  if (dcloak) dcloak.addEventListener('click', function(){
-    var g = _currentGame;
-    if (g && g.url) openAboutBlank(g.url); else toast('No game selected','error');
-  });
-}
-
-/* ===== PWA ===== */
-try { if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js'); } catch(e){}
-
-/* ===== Boot ===== */
-document.addEventListener('DOMContentLoaded', function(){
-  try { if (lucide && lucide.createIcons) lucide.createIcons(); } catch(e){}
-  var storedUser = Store.get('user', null);
-  if (storedUser) AppState.user = storedUser;
-  initGateway();
-  if (AppState.adminAuthed){
-    var ap = document.getElementById('admin-panel');
-    if (ap) ap.classList.add('open');
-  }
-});
-
-/* ===== Global Keyboard Shortcuts ===== */
-(function(){
-  var target = [['a','A'], ['~','`'], ['m','M']];
-  var seq = [];
-  function matchSeq(keys){return target.every(function(v,i){return v.includes(keys[i]);});}
-  document.addEventListener('DOMContentLoaded', function(){
-    var authSubmit = document.getElementById('auth-submit');
-    var authCancel = document.getElementById('auth-cancel');
-    var authInput = document.getElementById('auth-passkey');
-    var authError = document.getElementById('auth-error');
-    var overlay = document.getElementById('admin-overlay');
-    function doAuth(){
-      if (!authInput || !authError || !overlay) return;
-      var passkey = authInput.value.trim();
-      if (passkey === 'roundMin+2'){
-        overlay.classList.remove('open');
-        var ap = document.getElementById('admin-panel');
-        if (ap) ap.classList.add('open');
-        authInput.value = '';
-        if (window.AppState){AppState.adminAuthed=true;if(AppState.saveAdminAuthed)AppState.saveAdminAuthed();}
-        if (typeof renderAdmin === 'function') renderAdmin();
-        toast('Admin access granted','success');
-      } else {
-        authError.textContent = 'Invalid passkey';
-        authInput.classList.add('error');
-        setTimeout(function(){authInput.classList.remove('error');},500);
-      }
-    }
-    function closeOverlay(){
-      if (overlay) overlay.classList.remove('open');
-      if (authInput) authInput.value = '';
-      if (authError) authError.textContent = '';
-    }
-    if (authSubmit) authSubmit.addEventListener('click', doAuth);
-    if (authCancel) authCancel.addEventListener('click', closeOverlay);
-    if (authInput) authInput.addEventListener('keydown', function(e){if (e.key==='Enter') doAuth();});
-  });
-  document.addEventListener('keydown', function(e){
-    if (e.ctrlKey && e.shiftKey && e.key === 'P'){if (typeof triggerPanic === 'function') triggerPanic();}
-    if (seq.length >= target.length) seq.shift();
-    seq.push(e.key);
-    if (seq.length === target.length && matchSeq(seq)){
-      seq = [];
-      var overlay = document.getElementById('admin-overlay');
-      if (overlay){
-        overlay.classList.add('open');
-        var inp = document.getElementById('auth-passkey');
-        if (inp){inp.value='';setTimeout(function(){inp.focus();},100);}
-        var ae = document.getElementById('auth-error');
-        if (ae) ae.textContent = '';
-      }
-    }
-    if (e.key === 'Escape'){
-      var ap = document.getElementById('admin-panel');
-      if (ap && ap.classList.contains('open')) ap.classList.remove('open');
-      var ov = document.getElementById('admin-overlay');
-      if (ov && ov.classList.contains('open')) ov.classList.remove('open');
-    }
-    if (e.key === '\\' && !e.ctrlKey && !e.altKey && !e.metaKey){
-      e.preventDefault();
-      if (typeof handleBackslash === 'function') handleBackslash();
-    }
-  });
-})();
-
-})();
-</script>
+<script src="app.js"></script>
 </body>
 </html>
