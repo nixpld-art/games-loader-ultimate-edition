@@ -1,6 +1,7 @@
 node_modules/
 *.log
 .DS_Store
+api-key.txt
 
 # UBG Ultimate copy
 UBG Ultimate/
