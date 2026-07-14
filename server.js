@@ -1,11 +1,10 @@
 const http = require('http');
 const https = require('https');
-const http2 = require('http2');
 const fs = require('fs');
 const path = require('path');
 const exec = require('child_process').exec;
 
-const PORT = 8080;
+const PORT = process.env.PORT || 8080;
 const ROOT = __dirname;
 
 let GAMES_DATA = [];
@@ -47,7 +46,9 @@ function sanitizeUrl(raw) {
   } catch { return null; }
 }
 
-function proxyFetch(url) {
+function proxyFetch(url, redirects) {
+  redirects = redirects || 0;
+  if (redirects > 5) return Promise.reject(new Error('Too many redirects'));
   const sanitized = sanitizeUrl(url);
   if (!sanitized) return Promise.reject(new Error('Invalid URL'));
   return new Promise((resolve, reject) => {
@@ -67,13 +68,20 @@ function proxyFetch(url) {
     if (targetUrl.protocol === 'https:' || targetUrl.port === '443') opts.port = 443;
     const lib = targetUrl.protocol === 'https:' ? https : http;
     const req = lib.request(opts, (proxyRes) => {
+      var status = proxyRes.statusCode;
+      if (status >= 300 && status < 400 && proxyRes.headers.location) {
+        var redirectUrl = proxyRes.headers.location;
+        try { redirectUrl = new URL(redirectUrl, sanitized).href; } catch(e) {}
+        proxyFetch(redirectUrl, redirects + 1).then(resolve).catch(reject);
+        return;
+      }
       const chunks = [];
       proxyRes.on('data', (c) => chunks.push(c));
       proxyRes.on('end', () => {
         const buffer = Buffer.concat(chunks);
         const contentType = proxyRes.headers['content-type'] || '';
         resolve({
-          status: proxyRes.statusCode,
+          status: status,
           headers: proxyRes.headers,
           contentType,
           buffer,
@@ -360,7 +368,7 @@ var _lastWorkingModel = null;
 
 function delay(ms) { return new Promise(function(r){setTimeout(r, ms)}); }
 
-async function callOpenRouter(messages, apiKey) {
+async function callOpenRouter(messages, apiKey, origin) {
   var paidModels = apiKey ? ['openai/gpt-4o-mini'] : [];
   var freeModels = [
     'tencent/hy3:free', 'google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free',
@@ -395,9 +403,9 @@ async function callOpenRouter(messages, apiKey) {
   return null;
 }
 
-async function askAI(messages) {
+async function askAI(messages, origin) {
   var apiKey = loadApiKey();
-  var reply = await callOpenRouter(messages, apiKey);
+  var reply = await callOpenRouter(messages, apiKey, origin);
   if (reply) return reply;
 
   /* Fall back to local Jarvis */
@@ -407,6 +415,12 @@ async function askAI(messages) {
 }
 
 console.log('Starting from:', ROOT);
+
+function siteOrigin(req) {
+  var proto = req.headers['x-forwarded-proto'] || 'http';
+  var host = req.headers.host || ('localhost:' + ACTUAL_PORT);
+  return proto + '://' + host;
+}
 
 const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -418,6 +432,7 @@ const server = http.createServer(async (req, res) => {
   const url = req.url.split('?')[0];
   const query = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
   const fullUrl = req.url;
+  var origin = siteOrigin(req);
 
   /* ── API: Version ── */
   if (url === '/api/version') {
@@ -428,7 +443,7 @@ const server = http.createServer(async (req, res) => {
 
   /* ── API: Music Search ── */
   if (url.startsWith('/api/music/search') && ytSearch) {
-    const q = new URL(fullUrl, 'http://localhost').searchParams.get('q');
+    const q = new URL(fullUrl, origin).searchParams.get('q');
     if (!q || q.trim().length === 0) { res.writeHead(400); res.end(JSON.stringify({ error: 'Query required' })); return; }
     try {
       const results = await ytSearch(q.trim());
@@ -474,7 +489,7 @@ const server = http.createServer(async (req, res) => {
             if (mi > 0) await delay(1500);
             const ac = new AbortController();
             setTimeout(function(){try{ac.abort()}catch(e){}}, 30000);
-            var headers = { 'Content-Type': 'application/json', 'HTTP-Referer': 'http://localhost:8080', 'X-Title': 'Cache' };
+      var headers = { 'Content-Type': 'application/json', 'HTTP-Referer': origin || 'http://localhost:8080', 'X-Title': 'Cache' };
             if (apiKey) headers['Authorization'] = 'Bearer ' + apiKey;
             const orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
               method: 'POST', headers: headers,
@@ -504,7 +519,7 @@ const server = http.createServer(async (req, res) => {
       try {
         const data = JSON.parse(body);
         const messages = data.messages || [];
-        const reply = await askAI(messages);
+        const reply = await askAI(messages, origin);
         if (reply) {
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ choices: [{ message: { role: 'assistant', content: reply } }] }));
@@ -526,7 +541,7 @@ const server = http.createServer(async (req, res) => {
       const sanitized = sanitizeUrl(targetUrl);
       if (!sanitized) { res.writeHead(400); res.end('Invalid URL'); return; }
 
-      const proxyBase = 'http://' + (req.headers.host || 'localhost:' + ACTUAL_PORT) + '/api/proxy/';
+      const proxyBase = origin + '/api/proxy/';
       const result = await proxyFetch(sanitized);
       const ct = result.contentType;
 
@@ -681,9 +696,44 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  /* ── Jarvis file read ── */
+  if (req.method === 'GET' && url === '/api/jarvis/read') {
+    var targetPath = new URL(fullUrl, origin).searchParams.get('path') || '';
+    targetPath = targetPath.replace(/\.\.\//g, '').replace(/\.\./g, '');
+    var absPath = path.join(ROOT, targetPath);
+    if (!absPath.startsWith(ROOT)) { res.writeHead(403); res.end(JSON.stringify({error:'Forbidden'})); return; }
+    try {
+      var content = fs.readFileSync(absPath, 'utf8');
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ path: targetPath, content: content }));
+    } catch(e) { res.writeHead(404); res.end(JSON.stringify({error:'File not found'})); }
+    return;
+  }
+
+  /* ── Jarvis file edit (find/replace) ── */
+  if (req.method === 'POST' && url === '/api/jarvis/edit') {
+    let body = '';
+    req.on('data', c => body += c);
+    req.on('end', () => {
+      try {
+        var data = JSON.parse(body);
+        var filePath = (data.path || '').replace(/\.\.\//g, '').replace(/\.\./g, '');
+        var absPath = path.join(ROOT, filePath);
+        if (!absPath.startsWith(ROOT)) { res.writeHead(403); res.end(JSON.stringify({error:'Forbidden'})); return; }
+        var content = fs.readFileSync(absPath, 'utf8');
+        if (content.indexOf(data.find) === -1) { res.writeHead(400); res.end(JSON.stringify({error:'Text not found in file'})); return; }
+        content = content.split(data.find).join(data.replace);
+        fs.writeFileSync(absPath, content, 'utf8');
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, path: filePath, info: 'Replaced "' + data.find.substring(0, 50) + '..."' }));
+      } catch(e) { res.writeHead(500); res.end(JSON.stringify({error:e.message})); }
+    });
+    return;
+  }
+
   /* ── Play route (same-domain fullscreen game) ── */
   if (url === '/play') {
-    var target = new URL(fullUrl, 'http://localhost').searchParams.get('url') || '';
+    var target = new URL(fullUrl, origin).searchParams.get('url') || '';
     if (!target) { res.writeHead(400); res.end('Missing url param'); return; }
     var decoded = decodeURIComponent(target);
     var gameUrl = decoded;

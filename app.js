@@ -1233,14 +1233,26 @@ function renderUserManagement() {
     var body = document.getElementById("users-manage-body");
     if (!body) return;
     var roles = getRoles();
-    var entries = Object.keys(roles).map(function (k) { return { user: k, role: roles[k] }; });
-    if (!entries.length) body.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:20px;color:var(--muted)">No users assigned roles</td></tr>';
+    var seen = {};
+    var entries = [];
+    (AppState.sessions || []).forEach(function(s){
+        var h = s.handle.toLowerCase();
+        if (seen[h]) return;
+        seen[h] = true;
+        entries.push({ user: h, role: roles[h] || null, fromSession: true });
+    });
+    Object.keys(roles).forEach(function(k){
+        if (seen[k]) return;
+        seen[k] = true;
+        entries.push({ user: k, role: roles[k], fromSession: false });
+    });
+    if (!entries.length) body.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:20px;color:var(--muted)">No users yet</td></tr>';
     else {
         body.innerHTML = entries.map(function (e) {
             var isSelf = e.user === (AppState.user || "").toLowerCase();
             var selfTag = isSelf ? ' <span style="color:var(--muted);font-size:11px">(you)</span>' : "";
-            var roleTag = e.role === "admin" ? '<span style="color:var(--accent)">Admin</span>' : '<span style="color:#f59e0b">Mod</span>';
-            var rmBtn = currentIsAdmin() && !isSelf ? '<button class="remove-role-btn" data-user="' + e.user + '" style="color:var(--pink);cursor:pointer;background:none;border:none;font-size:12px">Remove</button>' : "";
+            var roleTag = e.role === "admin" ? '<span style="color:var(--accent)">Admin</span>' : e.role === "mod" ? '<span style="color:#f59e0b">Mod</span>' : '<span style="color:var(--muted)">user</span>';
+            var rmBtn = currentIsAdmin() && !isSelf && e.role ? '<button class="remove-role-btn" data-user="' + e.user + '" style="color:var(--pink);cursor:pointer;background:none;border:none;font-size:12px">Remove</button>' : "";
             return '<tr><td>' + e.user + selfTag + '</td><td>' + roleTag + '</td><td>' + rmBtn + '</td></tr>';
         }).join("");
         Array.from(document.querySelectorAll(".remove-role-btn")).forEach(function (b) {
@@ -1384,10 +1396,12 @@ function renderJarvis() {
         var actionLines = [];
         for (var i = 0; i < lines.length; i++) {
             var line = lines[i].trim();
-            if (line.indexOf("ADD_GAME:") === 0 || line.indexOf("BROADCAST:") === 0 || line.indexOf("SETTINGS:") === 0 || line.indexOf("SET_ROLE:") === 0 || line.indexOf("BAN:") === 0 || line.indexOf("UNBAN:") === 0 || line.indexOf("REMOVE_GAME:") === 0) actionLines.push(line);
+            if (line.indexOf("ADD_GAME:") === 0 || line.indexOf("BROADCAST:") === 0 || line.indexOf("SETTINGS:") === 0 || line.indexOf("SET_ROLE:") === 0 || line.indexOf("BAN:") === 0 || line.indexOf("UNBAN:") === 0 || line.indexOf("REMOVE_GAME:") === 0 || line.indexOf("EDIT_FILE:") === 0 || line.indexOf("READ_FILE:") === 0) actionLines.push(line);
         }
         if (!actionLines.length) return [];
-        saveSnapshot();
+        var hasFileEdit = false;
+        for (var fe = 0; fe < actionLines.length; fe++) { if (actionLines[fe].indexOf("EDIT_FILE:") === 0 || actionLines[fe].indexOf("READ_FILE:") === 0) hasFileEdit = true; }
+        if (!hasFileEdit) saveSnapshot();
         var executed = [];
         for (var j = 0; j < actionLines.length; j++) {
             var cmd = actionLines[j];
@@ -1427,6 +1441,23 @@ function renderJarvis() {
                         }
                     }
                     renderGames(GAMES);
+                } else if (cmd.indexOf("READ_FILE:") === 0) {
+                    var rfPath = cmd.substring(10).trim();
+                    fetch("/api/jarvis/read?path=" + encodeURIComponent(rfPath)).then(function(r){return r.json()}).then(function(d){
+                        if (d.error) { addMsg("assistant", '<div style="color:var(--pink)">Read error: ' + d.error + '</div>'); return; }
+                        addMsg("assistant", '<div style="font-size:11px;background:rgba(0,0,0,.3);padding:8px;border-radius:6px;white-space:pre-wrap;font-family:monospace;max-height:200px;overflow:auto">' + escapeHtml(d.content.substring(0, 1500)) + (d.content.length > 1500 ? '...' : '') + '</div>');
+                    });
+                    executed.push("Reading " + rfPath + "...");
+                } else if (cmd.indexOf("EDIT_FILE:") === 0) {
+                    var edata = JSON.parse(cmd.substring(10).trim());
+                    executed.push("Editing " + edata.path + "...");
+                    fetch("/api/jarvis/edit", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(edata) }).then(function(r){return r.json()}).then(function(d){
+                        if (d.success) {
+                            var info = d.info || ("Edited " + edata.path);
+                            addMsg("assistant", '<div style="color:#10b981">&#10003; ' + escapeHtml(info) + '</div><div style="font-size:11px;color:var(--muted);margin-top:4px">Reloading in 3s...</div>');
+                            setTimeout(function(){ location.reload(); }, 3000);
+                        } else { addMsg("assistant", '<div style="color:var(--pink)">Edit failed: ' + escapeHtml(d.error || "unknown") + '</div>'); }
+                    }).catch(function(e){ addMsg("assistant", '<div style="color:var(--pink)">Edit error: ' + escapeHtml(e.message) + '</div>'); });
                 }
             } catch (e) { executed.push("Failed: " + cmd.substring(0, 30) + " - " + e.message); }
         }
@@ -1477,7 +1508,7 @@ function renderJarvis() {
     });
 
     if (!conv.children.length) {
-        addMsg("assistant", '<div style="color:var(--muted)">Jarvis ready. Chat with me or ask me to manage the site — "add 5 games", "broadcast hi", etc.</div>');
+        addMsg("assistant", '<div style="color:var(--muted)">Jarvis ready. Chat, manage games, or even edit website files — try "fix the admin panel users list" or "read server.js".</div>');
         saveSnapshot();
     }
 
@@ -1498,6 +1529,10 @@ function renderJarvis() {
             + "- Web proxy, admin panel, music player, AI chat, settings\n\n"
             + "When the user asks to perform an action, include the appropriate command on its own line:\n"
             + "ADD_GAME: {\"title\":\"...\",\"url\":\"...\"} — BROADCAST: message — REMOVE_GAME: name — SETTINGS: {\"key\":\"value\"} — SET_ROLE: {\"user\":\"name\",\"role\":\"admin|mod\"}\n"
+            + "You can edit the website's source files in real time:\n"
+            + "READ_FILE: filename.js — Read a file's contents (shows in chat)\n"
+            + "EDIT_FILE: {\"path\":\"filename.js\",\"find\":\"exact text to find\",\"replace\":\"new text\"} — Find and replace text in any file\n"
+            + "The page auto-reloads 3s after an edit. Use this to fix bugs, change UI, update server code, etc.\n"
             + "But for casual conversation, just chat normally. Be concise but warm.";
 
         addLoading();
@@ -1518,7 +1553,7 @@ function renderJarvis() {
             var reply = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : "No response";
             _jarvisHistory.push({ role: "assistant", content: reply });
             var executed = parseAndExecute(reply);
-            var actionPrefixes = ["ADD_GAME:", "BROADCAST:", "REMOVE_GAME:", "SETTINGS:", "SET_ROLE:", "BAN:", "UNBAN:"];
+            var actionPrefixes = ["ADD_GAME:", "BROADCAST:", "REMOVE_GAME:", "SETTINGS:", "SET_ROLE:", "BAN:", "UNBAN:", "EDIT_FILE:", "READ_FILE:"];
             var cleanReply = reply;
             reply.split("\n").forEach(function (l) {
                 for (var pi = 0; pi < actionPrefixes.length; pi++) { if (l.trim().indexOf(actionPrefixes[pi]) === 0) cleanReply = cleanReply.replace(l, ""); }
